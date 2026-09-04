@@ -1,0 +1,87 @@
+services:
+  api:
+    build:
+      context: ./services/api
+    container_name: ascent-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN:-ascent-super-secret-token}
+      - INFLUX_ORG=${INFLUX_ORG:-ihu}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-ascent-twins}
+      - LIBRARY_PATH=/data/library
+      - SYNTHETIC_ENABLED=true
+    volumes:
+      - ./library:/data/library
+      - ./data:/data
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: ascent-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: ascent-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USER:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASSWORD:-ascent-admin-123}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG:-ihu}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET:-ascent-twins}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:-ascent-super-secret-token}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: ascent-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-ascent-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - INFLUX_TOKEN=${INFLUX_TOKEN:-ascent-super-secret-token}
+      - INFLUX_ORG=${INFLUX_ORG:-ihu}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-ascent-twins}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  jupyter:
+    image: jupyter/base-notebook:python-3.11
+    container_name: ascent-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN:-ascent}
+    volumes:
+      - ./jupyter/notebooks:/home/jovyan/work
+      - ./library:/home/jovyan/work/library:ro
+    command: start-notebook.py --NotebookApp.token=${JUPYTER_TOKEN:-ascent} --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.ip='0.0.0.0'
+    restart: unless-stopped
+
+volumes:
+  influxdb-data:
+  grafana-data:

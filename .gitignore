@@ -1,0 +1,8 @@
+.env
+data/
+__pycache__/
+*.pyc
+influxdb-data/
+grafana-data/
+.ipynb_checkpoints/
+.DS_Store
