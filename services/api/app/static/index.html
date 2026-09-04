@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ascent-DTwin — IHU Digital Twin Library</title>
+<link rel="stylesheet" href="/static/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">A</div>
+  <div class="brand">
+    <h1>Ascent-DTwin <span style="color:#22d3ee">· IHU</span></h1>
+    <small>Digital Twin Library — inspired by INTO-CPS DTaaS · Jupyter + Grafana + MQTT + InfluxDB</small>
+  </div>
+  <div class="badges">
+    <span class="pill"><span class="dot" id="dot-api"></span> API <b id="st-api">…</b></span>
+    <span class="pill"><span class="dot" id="dot-mqtt"></span> MQTT <b id="st-mqtt">…</b></span>
+    <span class="pill"><span class="dot" id="dot-influx"></span> InfluxDB <b id="st-influx">…</b></span>
+    <a class="btn small ghost" href="http://localhost:3000" target="_blank">Grafana</a>
+    <a class="btn small ghost" href="http://localhost:8888" target="_blank">Jupyter</a>
+    <a class="btn small ghost" href="/docs" target="_blank">API Docs</a>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="row">
+      <button class="btn" id="btn-new" style="flex:1">+ New Twin</button>
+      <button class="btn ghost" id="btn-refresh" title="Reload">⟳</button>
+    </div>
+    <h3> twin library</h3>
+    <div class="twin-list" id="twin-list"></div>
+    <h3>integrations</h3>
+    <div class="nav">
+      <button data-link="http://localhost:3000" data-name="grafana">📊 Open Grafana dashboards</button>
+      <button data-link="http://localhost:8888" data-name="jupyter">📓 Open JupyterLab</button>
+      <button id="btn-esp32">📡 ESP32 firmware & topic</button>
+      <button id="btn-sim">⚡ Inject synthetic burst</button>
+    </div>
+    <h3>about</h3>
+    <p style="color:var(--muted);font-size:13px">Ascent-DTwin is an IHU open-source tool for viewing, creating, editing and deleting digital twins with <b>live telemetry</b>. Minimal DTaaS core: twin library (JSON), MQTT ingest, InfluxDB storage, Grafana viz, Jupyter analysis.</p>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <input id="search" placeholder="Search twins…" style="flex:1;min-width:200px;background:#0a1230;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px"/>
+      <select id="live-field" style="background:#0a1230;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px">
+        <option value="temperature">temperature</option>
+        <option value="humidity">humidity</option>
+        <option value="pressure">pressure</option>
+        <option value="co2">co2</option>
+      </select>
+      <label class="pill"><input type="checkbox" id="live-toggle" checked/> live 2s</label>
+    </div>
+
+    <div id="detail"></div>
+
+    <h3 style="margin-top:18px">Library</h3>
+    <div class="grid" id="cards"></div>
+
+    <div class="footer">
+      Ascent-DTwin · International Hellenic University · MIT License · Built on INTO-CPS DTaaS concepts (third-party: Grafana, InfluxDB, Mosquitto MQTT, JupyterLab). See <a href="https://github.com/INTO-CPS-Association/DTaaS" target="_blank">DTaaS upstream</a>.
+      <br/>MQTT topic pattern: <code>ascent/&lt;twin-id&gt;/telemetry</code> · HTTP: <code>POST /api/twins/&lt;id&gt;/telemetry</code>
+    </div>
+  </main>
+</div>
+
+<div class="modal-back" id="modal-back">
+  <div class="modal">
+    <h2 id="modal-title">New Twin</h2>
+    <div class="field"><label>Name</label><input id="f-name" placeholder="e.g. ESP32 Lab Room"/></div>
+    <div class="field"><label>Description</label><textarea id="f-desc" rows="3" placeholder="What does this twin represent?"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Asset type</label><input id="f-type" value="esp32.sensor"/></div>
+      <div class="field"><label>Location</label><input id="f-location" value="IHU Lab"/></div>
+    </div>
+    <div class="field"><label>MQTT topic (optional)</label><input id="f-topic" placeholder="ascent/my-twin/telemetry"/></div>
+    <div class="field"><label>Fields (comma separated)</label><input id="f-fields" value="temperature,humidity,pressure,co2"/></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="modal-save">Save</button>
+      <button class="btn ghost" id="modal-cancel">Cancel</button>
+      <button class="btn danger" id="modal-delete" style="display:none;margin-left:auto">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="esp-back">
+  <div class="modal" style="width:min(680px,100%)">
+    <h2>ESP32 → Ascent-DTwin</h2>
+    <p style="color:var(--muted);font-size:13px" id="esp-sub">Publish JSON to the twin topic. Full sketch in <code>examples/esp32/esp32_telemetry.ino</code>.</p>
+    <pre class="code" id="esp-code"></pre>
+    <div class="row"><button class="btn ghost" id="esp-close">Close</button>
+    <button class="btn" id="esp-copy">Copy snippet</button></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

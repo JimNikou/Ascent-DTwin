@@ -1,0 +1,171 @@
+let twins = [], selected = null, chart = null, timer = null;
+const $ = (id) => document.getElementById(id);
+
+async function api(path, opts={}) {
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
+  if(!r.ok){ const t = await r.text(); throw new Error(t||r.statusText); }
+  return r.json();
+}
+
+async function refreshHealth(){
+  try{
+    const h = await api('/api/health');
+    setDot('api', h.api==='up'); $('st-api').textContent = h.api;
+    setDot('mqtt', h.mqtt==='up'); $('st-mqtt').textContent = h.mqtt;
+    setDot('influx', String(h.influxdb).startsWith('up')); $('st-influx').textContent = h.influxdb;
+  }catch{ setDot('api',false); }
+}
+function setDot(name, up){ $('dot-'+name).className = 'dot ' + (up?'up':'down'); }
+
+async function loadTwins(){
+  twins = await api('/api/twins');
+  if(!selected || !twins.find(t=>t.id===selected.id)){
+    selected = twins[0] || null;
+  } else {
+    selected = twins.find(t=>t.id===selected.id);
+  }
+  renderList(); renderCards(); renderDetail(); startLive();
+}
+
+function filtered(){
+  const q = ($('search').value||'').toLowerCase();
+  return twins.filter(t => (t.name+t.id+(t.description||'')).toLowerCase().includes(q));
+}
+
+function renderList(){
+  const el = $('twin-list'); el.innerHTML='';
+  filtered().forEach(t=>{
+    const d = document.createElement('div');
+    d.className = 'twin-item' + (selected&&selected.id===t.id?' active':'');
+    d.innerHTML = `<b>${esc(t.name)}</b><span>${esc(t.id)} · ${esc(t.asset_type||'')}</span>`;
+    d.onclick = ()=>{ selected=t; renderList(); renderCards(); renderDetail(); startLive(); };
+    el.appendChild(d);
+  });
+}
+
+function renderCards(){
+  const el = $('cards'); el.innerHTML='';
+  filtered().forEach(t=>{
+    const d = document.createElement('div');
+    d.className='card';
+    d.innerHTML = `<h3>${esc(t.name)}</h3><p>${esc(t.description||'')}</p>
+      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">● ${esc(t.status||'active')}</span></div>
+      <div class="topic">${esc(t.mqtt_topic||'')}</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" data-act="view">Live view</button>
+        <button class="btn small ghost" data-act="edit">Edit</button>
+        <button class="btn small ghost" data-act="dup">Duplicate</button>
+      </div>`;
+    d.querySelector('[data-act=view]').onclick=()=>{selected=t;renderList();renderDetail();startLive();window.scrollTo({top:0,behavior:'smooth'});};
+    d.querySelector('[data-act=edit]').onclick=()=>openModal(t);
+    d.querySelector('[data-act=dup]').onclick=async()=>{
+      await api('/api/twins',{method:'POST',body:JSON.stringify({name:t.name+' copy',description:t.description,asset_type:t.asset_type,location:t.location,fields:t.fields})});
+      await loadTwins();
+    };
+    el.appendChild(d);
+  });
+}
+
+async function renderDetail(){
+  const el = $('detail');
+  if(!selected){ el.innerHTML = `<div class="card">No twins yet — create one.</div>`; return; }
+  const t = selected;
+  el.innerHTML = `<div class="card">
+    <div class="row"><h3 style="margin:0;flex:1">${esc(t.name)} <small style="color:var(--muted)">/${esc(t.id)}</small></h3>
+      <button class="btn small ghost" id="d-edit">Edit</button>
+      <button class="btn small ghost" id="d-graf">Grafana ↗</button>
+    </div>
+    <p>${esc(t.description||'')}</p>
+    <div class="meta"><span class="tag">${esc(t.asset_type)}</span><span class="tag">${esc(t.location)}</span><span class="tag">${esc(t.mqtt_topic)}</span></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="chart-wrap"><canvas id="live" height="110"></canvas>
+      <div class="row" style="margin-top:8px"><small style="color:var(--muted)" id="live-meta">waiting for telemetry…</small>
+      <span style="flex:1"></span>
+      <small style="color:var(--muted)">MQTT: <code id="d-topic">${esc(t.mqtt_topic)}</code> · HTTP POST /api/twins/${esc(t.id)}/telemetry</small></div>
+    </div>
+  </div>`;
+  $('d-edit').onclick=()=>openModal(t);
+  $('d-graf').onclick=()=>window.open('http://localhost:3000','_blank');
+  await updateLive(true);
+}
+
+async function updateLive(first=false){
+  if(!selected) return;
+  const field = $('live-field').value;
+  try{
+    const pts = await api(`/api/twins/${selected.id}/telemetry?limit=100`);
+    const labels = pts.map(p=>new Date(p.time).toLocaleTimeString());
+    const vals = pts.map(p=>Number(p[field] ?? NaN));
+    const last = pts[pts.length-1] || {};
+    // KPIs
+    const k = $('kpis');
+    if(k){
+      const show = ['temperature','humidity','pressure','co2'].filter(f=>last[f]!==undefined);
+      k.innerHTML = (show.length?show:Object.keys(last).filter(x=>x!=='time').slice(0,4)).map(f=>
+        `<div class="kpi"><small>${f}</small><b>${last[f] ?? '—'}</b></div>`).join('') || `<div class="kpi"><small>no data</small><b>—</b></div>`;
+    }
+    const m = $('live-meta');
+    if(m) m.textContent = pts.length ? `${pts.length} pts · last ${labels[labels.length-1]||''}` : 'no telemetry yet — synthetic generator feeds esp32-demo every 2s; flash ESP32 for live data';
+    const ctx = $('live'); if(!ctx) return;
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, {type:'line',
+      data:{labels, datasets:[{label:field, data:vals, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,.15)', fill:true, tension:.35, pointRadius:0}]},
+      options:{plugins:{legend:{labels:{color:'#c6d2f2'}}}, scales:{x:{ticks:{color:'#93a1c0',maxTicksLimit:8}}, y:{ticks:{color:'#93a1c0'}}}}});
+  }catch(e){ console.warn(e); }
+}
+
+function startLive(){
+  if(timer) clearInterval(timer);
+  const tick = ()=>{ if($('live-toggle').checked) updateLive(); };
+  timer = setInterval(tick, 2000);
+}
+
+// ---- modal CRUD
+let editing = null;
+function openModal(t=null){
+  editing = t;
+  $('modal-title').textContent = t ? `Edit ${t.name}` : 'New Twin';
+  $('f-name').value = t?.name||''; $('f-desc').value=t?.description||'';
+  $('f-type').value=t?.asset_type||'esp32.sensor'; $('f-location').value=t?.location||'IHU Lab';
+  $('f-topic').value=t?.mqtt_topic||''; $('f-fields').value=(t?.fields||['temperature','humidity']).join(',');
+  $('modal-delete').style.display = t?'':'none';
+  $('modal-back').classList.add('open');
+}
+function closeModal(){ $('modal-back').classList.remove('open'); editing=null; }
+
+async function saveModal(){
+  const body = {
+    name:$('f-name').value, description:$('f-desc').value,
+    asset_type:$('f-type').value, location:$('f-location').value,
+    mqtt_topic:$('f-topic').value||undefined,
+    fields:$('f-fields').value.split(',').map(s=>s.trim()).filter(Boolean)
+  };
+  if(editing) await api('/api/twins/'+editing.id,{method:'PUT',body:JSON.stringify(body)});
+  else await api('/api/twins',{method:'POST',body:JSON.stringify(body)});
+  closeModal(); await loadTwins();
+}
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---- ESP32 modal
+function espSnippet(){
+  const t = selected || {id:'esp32-demo', mqtt_topic:'ascent/esp32-demo/telemetry'};
+  return `#include <WiFi.h>\n#include <PubSubClient.h>\n// ID: ${t.id}\nconst char* WIFI_SSID="YOUR_WIFI";\nconst char* WIFI_PASS="YOUR_PASS";\nconst char* MQTT_HOST="YOUR_PC_IP"; // docker host IP, port 1883\nconst char* TOPIC="${t.mqtt_topic||('ascent/'+t.id+'/telemetry')}";\nWiFiClient esp; PubSubClient mqtt(esp);\nvoid setup(){ Serial.begin(115200); WiFi.begin(WIFI_SSID,WIFI_PASS);\n while(WiFi.status()!=WL_CONNECTED) delay(500);\n mqtt.setServer(MQTT_HOST,1883); }\nvoid loop(){ if(!mqtt.connected()) mqtt.connect("esp32-${t.id}");\n float temp=22+random(0,300)/100.0; float hum=45+random(0,1000)/100.0;\n char buf[128]; snprintf(buf,sizeof(buf),"{{\\"temperature\\":%.2f,\\"humidity\\":%.2f}}",temp,hum);\n mqtt.publish(TOPIC,buf); delay(2000); }`;
+}
+
+$('btn-new').onclick=()=>openModal(null);
+$('modal-cancel').onclick=closeModal;
+$('modal-save').onclick=()=>saveModal().catch(e=>alert(e.message));
+$('modal-delete').onclick=async()=>{ if(!editing) return; if(!confirm('Delete '+editing.name+'?')) return;
+  await api('/api/twins/'+editing.id,{method:'DELETE'}); closeModal(); selected=null; await loadTwins(); };
+$('btn-refresh').onclick=()=>{refreshHealth();loadTwins();};
+$('search').oninput=()=>{renderList();renderCards();};
+$('live-field').onchange=()=>updateLive(true);
+$('btn-sim').onclick=async()=>{ if(!selected) return alert('Select a twin first');
+  await api(`/api/twins/${selected.id}/simulate?n=30`,{method:'POST'}); updateLive(true); };
+$('btn-esp32').onclick=()=>{ $('esp-code').textContent=espSnippet(); $('esp-back').classList.add('open'); };
+$('esp-close').onclick=()=>$('esp-back').classList.remove('open');
+$('esp-copy').onclick=()=>{ navigator.clipboard.writeText($('esp-code').textContent); };
+document.querySelectorAll('[data-link]').forEach(b=>b.onclick=()=>window.open(b.dataset.link,'_blank'));
+
+refreshHealth(); loadTwins(); setInterval(refreshHealth,5000);
