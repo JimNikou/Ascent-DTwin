@@ -1,0 +1,12 @@
+{
+  "id": "esp32-demo",
+  "name": "ESP32 Demo Room",
+  "description": "Synthetic + ESP32-ready demo twin. Flash the ESP32 example to push live data.",
+  "asset_type": "esp32.sensor",
+  "location": "IHU Lab",
+  "mqtt_topic": "ascent/esp32-demo/telemetry",
+  "fields": ["temperature", "humidity", "pressure", "co2"],
+  "status": "active",
+  "created_at": "2026-09-04T00:00:00+00:00",
+  "updated_at": "2026-09-04T00:00:00+00:00"
+}

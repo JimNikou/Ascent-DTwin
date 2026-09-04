@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: Ascent
+    orgId: 1
+    folder: Ascent-DTwin
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
