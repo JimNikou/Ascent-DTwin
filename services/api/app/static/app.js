@@ -52,7 +52,7 @@ function renderList(){
   const el = $('twin-list'); el.innerHTML='';
   const list = filtered();
   if(!list.length){
-    el.innerHTML = `<div class="empty">No twins match.<br/><button class="btn small" onclick="openModal(null)">+ Create one</button></div>`;
+    el.innerHTML = `<div class="empty">No twins match.<br/><button class="btn small" onclick="openModal(null)">Create Twin</button></div>`;
     return;
   }
   list.forEach(t=>{
@@ -68,17 +68,17 @@ function renderCards(){
   const el = $('cards'); el.innerHTML='';
   const list = filtered();
   if(!list.length){
-    el.innerHTML = `<div class="card empty-card"><h3>No twins yet</h3><p>Create your first digital twin to start collecting live telemetry.</p><button class="btn" onclick="openModal(null)">+ New Twin</button></div>`;
+    el.innerHTML = `<div class="card empty-card"><h3>No twins yet</h3><p>Create your first digital twin to start collecting live telemetry.</p><button class="btn" onclick="openModal(null)">New Twin</button></div>`;
     return;
   }
   list.forEach(t=>{
     const d = document.createElement('div');
     d.className='card';
     d.innerHTML = `<h3>${esc(t.name)}</h3><p>${esc(t.description||'')}</p>
-      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">● ${esc(t.status||'active')}</span></div>
+      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">${esc(t.status||'active')}</span></div>
       <div class="topic">${esc(t.mqtt_topic||'')}</div>
       <div class="row" style="margin-top:10px">
-        <button class="btn small" data-act="view">Live view</button>
+        <button class="btn small" data-act="view">View</button>
         <button class="btn small ghost" data-act="edit">Edit</button>
         <button class="btn small ghost" data-act="dup">Duplicate</button>
       </div>`;
@@ -97,20 +97,23 @@ function renderCards(){
 
 async function renderDetail(){
   const el = $('detail');
-  if(!selected){ el.innerHTML = `<div class="card empty-card"><h3>No twin selected</h3><p>Select a twin from the library or create a new one to see live telemetry.</p><button class="btn" onclick="openModal(null)">+ New Twin</button></div>`; return; }
+  if(!selected){ el.innerHTML = `<div class="card empty-card"><h3>No twin selected</h3><p>Select a twin from the library or create a new one to view live telemetry.</p><button class="btn" onclick="openModal(null)">New Twin</button></div>`; return; }
   const t = selected;
   el.innerHTML = `<div class="card">
-    <div class="row"><h3 style="margin:0;flex:1">${esc(t.name)} <small style="color:var(--muted)">/${esc(t.id)}</small></h3>
+    <div class="detail-head">
+      <h3>${esc(t.name)} <span class="twin-id">/${esc(t.id)}</span></h3>
       <button class="btn small ghost" id="d-edit">Edit</button>
-      <button class="btn small ghost" id="d-graf">Grafana ↗</button>
+      <button class="btn small ghost" id="d-graf">Grafana</button>
     </div>
     <p>${esc(t.description||'')}</p>
-    <div class="meta"><span class="tag">${esc(t.asset_type)}</span><span class="tag">${esc(t.location)}</span><span class="tag">${esc(t.mqtt_topic)}</span></div>
+    <div class="meta"><span class="tag">${esc(t.asset_type)}</span><span class="tag">${esc(t.location)}</span><span class="tag">${esc(t.status||'active')}</span></div>
     <div class="kpis" id="kpis"></div>
     <div class="chart-wrap"><canvas id="live" height="110"></canvas>
-      <div class="row" style="margin-top:8px"><small style="color:var(--muted)" id="live-meta">waiting for telemetry…</small>
-      <span style="flex:1"></span>
-      <small style="color:var(--muted)">MQTT: <code id="d-topic">${esc(t.mqtt_topic)}</code> · HTTP POST /api/twins/${esc(t.id)}/telemetry</small></div>
+      <div class="chart-meta">
+        <span id="live-meta">Waiting for telemetry&hellip;</span>
+        <span style="flex:1"></span>
+        <span>MQTT: <code id="d-topic">${esc(t.mqtt_topic)}</code> &middot; HTTP POST /api/twins/${esc(t.id)}/telemetry</span>
+      </div>
     </div>
   </div>`;
   $('d-edit').onclick=()=>openModal(t);
@@ -134,12 +137,12 @@ async function updateLive(first=false){
         `<div class="kpi"><small>${f}</small><b>${last[f] ?? '—'}</b></div>`).join('') || `<div class="kpi"><small>no data</small><b>—</b></div>`;
     }
     const m = $('live-meta');
-    if(m) m.textContent = pts.length ? `${pts.length} pts · last ${labels[labels.length-1]||''}` : 'no telemetry yet — synthetic generator feeds esp32-demo every 2s; flash ESP32 for live data';
+    if(m) m.textContent = pts.length ? `${pts.length} points &middot; last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
     const ctx = $('live'); if(!ctx) return;
     if(chart) chart.destroy();
     chart = new Chart(ctx, {type:'line',
-      data:{labels, datasets:[{label:field, data:vals, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,.15)', fill:true, tension:.35, pointRadius:0}]},
-      options:{plugins:{legend:{labels:{color:'#c6d2f2'}}}, scales:{x:{ticks:{color:'#93a1c0',maxTicksLimit:8}}, y:{ticks:{color:'#93a1c0'}}}}});
+      data:{labels, datasets:[{label:field, data:vals, borderColor:'#0969da', backgroundColor:'rgba(9,105,218,.10)', fill:true, tension:.3, pointRadius:0, borderWidth:1.5}]},
+      options:{plugins:{legend:{labels:{color:'#57606a', boxWidth:12, font:{size:11}}}}, scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:8,font:{size:11}}, grid:{color:'#eef0f3'}}, y:{ticks:{color:'#8b949e',font:{size:11}}, grid:{color:'#eef0f3'}}}}});
   }catch(e){ console.warn(e); }
 }
 
