@@ -18,7 +18,7 @@
         "label": "Twin",
         "type": "query",
         "datasource": {"type": "influxdb", "uid": null},
-        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"twin_id\")",
+        "query": "from(bucket: \"${bucket}\") |> range(start: -7d) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\") |> keep(columns: [\"twin_id\"]) |> distinct(column: \"twin_id\")",
         "refresh": 1,
         "current": {"text": "esp32-demo", "value": "esp32-demo"},
         "hide": 0

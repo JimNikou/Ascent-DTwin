@@ -257,8 +257,10 @@ without any per-twin configuration.
 3. **Web UI** — select the twin in the library: live chart, KPIs, health badge and
    anomaly markers work immediately.
 4. **Grafana** — open the dashboard and pick the twin from the **Twin** dropdown
-   (top-left). The dropdown is populated from InfluxDB, so your new twin appears as
-   soon as it has sent data. All three panels switch to it instantly.
+   (top-left). The dropdown lists every twin that has sent data in the last 7 days
+   (queried from InfluxDB), so your new twin appears as soon as it has sent data and
+   disappears automatically if it goes silent for a week. All three panels switch to
+   the selected twin instantly.
 5. **Jupyter** — run either notebook; the `TWIN_ID` cell auto-selects the first twin
    (or `esp32-demo` if present). Change `TWIN_ID` to any twin id to analyze it.
 
