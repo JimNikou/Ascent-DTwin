@@ -61,6 +61,20 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .page-head h2{margin:0 0 4px;font-size:20px;font-weight:600}
 .page-head p{margin:0;color:var(--text-2);font-size:13px}
 
+/* twin library fills the whole screen */
+#page-library{max-width:none;padding:0;margin:0}
+
+/* ---------------- tables ---------------- */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+table.twin-table{width:100%;border-collapse:collapse;font-size:13px}
+.twin-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);font-weight:600;padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.twin-table td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
+.twin-table tr:last-child td{border-bottom:none}
+.twin-table tr.clickable{cursor:pointer}
+.twin-table tr.clickable:hover{background:var(--accent-soft)}
+.twin-table td b{color:var(--text);font-weight:600}
+.twin-table td .muted{font-size:11px}
+
 /* dashboard */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .stat{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
@@ -106,16 +120,16 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .btn:disabled{opacity:.55;cursor:not-allowed}
 
 /* ---------------- layout ---------------- */
-.layout{display:grid;grid-template-columns:264px 1fr;min-height:calc(100vh - 92px)}
-.sidebar{border-right:1px solid var(--border);padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:4px}
+.layout{display:grid;grid-template-columns:264px 1fr;height:calc(100vh - 92px);min-height:0}
+.sidebar{border-right:1px solid var(--border);padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:4px;overflow-y:auto}
 .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin:16px 0 6px;font-weight:600}
 .sidebar h3:first-child{margin-top:0}
 .sidebar .row{display:flex;gap:8px}
 .sidebar .row .btn{flex:1}
-.main{padding:20px 24px;max-width:1280px;width:100%}
+.main{padding:16px 24px 24px;max-width:none;width:100%;overflow-y:auto}
 
 /* twin list */
-.twin-list{display:flex;flex-direction:column;gap:4px;max-height:44vh;overflow:auto}
+.twin-list{display:flex;flex-direction:column;gap:4px;flex:1;overflow-y:auto;min-height:0}
 .twin-item{border:1px solid var(--border);background:var(--surface-2);padding:8px 10px;border-radius:var(--radius);cursor:pointer}
 .twin-item:hover{border-color:var(--border-strong);background:#f0f2f5}
 .twin-item.active{border-color:var(--accent);background:var(--accent-soft)}
@@ -128,7 +142,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .nav button:hover{background:var(--surface-2);border-color:var(--border);color:var(--text)}
 
 /* ---------------- toolbar ---------------- */
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;position:sticky;top:0;background:var(--bg);z-index:5;padding:8px 0 12px}
 .toolbar input,.toolbar select{background:var(--surface);border:1px solid var(--border-strong);color:var(--text);border-radius:var(--radius);padding:7px 10px;font-size:13px;font-family:var(--font)}
 .search-wrap{flex:1;min-width:200px;position:relative;display:flex;align-items:center}
 .search-wrap input{flex:1;min-width:0;padding-right:30px}
@@ -223,7 +237,8 @@ input:focus,textarea:focus,select:focus,button:focus{outline:none;border-color:v
 
 /* ---------------- responsive ---------------- */
 @media(max-width:900px){
-  .layout{grid-template-columns:1fr}
+  .layout{grid-template-columns:1fr;height:auto}
   .sidebar{border-right:0;border-bottom:1px solid var(--border)}
   .brand small{display:none}
+  .main{overflow:visible}
 }

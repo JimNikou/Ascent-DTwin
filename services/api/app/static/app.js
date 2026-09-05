@@ -30,7 +30,7 @@ function setDot(name, up){ $('dot-'+name).className = 'dot ' + (up?'up':'down');
 let currentPage = 'dashboard';
 function showPage(name){
   currentPage = name;
-  document.querySelectorAll('.page').forEach(p=>p.style.display = p.id==='page-'+name ? '' : 'none');
+  document.querySelectorAll('.page').forEach(p=>p.style.display = p.id==='page-'+name ? 'block' : 'none');
   document.querySelectorAll('.navpage').forEach(b=>b.classList.toggle('active', b.dataset.page===name));
   if(name==='dashboard') renderDashboard();
   if(name==='library') loadTwins();
@@ -60,6 +60,24 @@ async function renderDashboard(){
     $('dash-activity').innerHTML = activity.length
       ? activity.map(a=>`<div class="act"><span class="act-time">${new Date(a.time).toLocaleTimeString()}</span><span class="tag act-${a.kind.replace(/\./g,'-')}">${a.kind}</span><span>${esc(a.message)}</span></div>`).join('')
       : '<p class="muted">No activity yet. Create a twin or generate synthetic data.</p>';
+    $('dash-twin-rows').innerHTML = twins.map(t=>{
+      const h = t.health||{};
+      return `<tr class="clickable" data-id="${esc(t.id)}">
+        <td><b>${esc(t.name)}</b><br/><span class="muted">${esc(t.id)}</span></td>
+        <td><span class="tag h-${h.status||'unknown'}">${h.score??'—'} ${h.status||''}</span></td>
+        <td>${esc(t.status||'active')}</td>
+        <td>${h.last_seen ? new Date(h.last_seen).toLocaleTimeString() : '—'}</td>
+        <td>${h.points??0}</td>
+        <td>${h.anomaly_count??0}</td>
+        <td><button class="btn small ghost">View</button></td>
+      </tr>`;
+    }).join('');
+    document.querySelectorAll('#dash-twin-rows tr').forEach(tr=>{
+      tr.onclick = ()=>{
+        const t = twins.find(x=>x.id===tr.dataset.id);
+        if(t){ selected = t; showPage('library'); }
+      };
+    });
   }catch(e){ console.warn('dashboard', e); }
 }
 

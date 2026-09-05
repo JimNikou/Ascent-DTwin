@@ -59,6 +59,16 @@
       <div class="act-list" id="dash-activity"></div>
     </div>
   </div>
+  <div class="card" style="margin-top:12px">
+    <h3>Twin Status</h3>
+    <p>Click a row to open the twin in the library.</p>
+    <div class="table-wrap">
+      <table class="twin-table">
+        <thead><tr><th>Twin</th><th>Health</th><th>Status</th><th>Last seen</th><th>Points</th><th>Anomalies</th><th></th></tr></thead>
+        <tbody id="dash-twin-rows"></tbody>
+      </table>
+    </div>
+  </div>
 </section>
 
 <!-- ============================== LIBRARY ============================== -->
@@ -171,6 +181,53 @@
 
     <h3>Anomaly detection</h3>
     <p>The API computes a rolling z-score per sensor field (last 200 values). A point with |z| &gt; 3 on any field is flagged as an anomaly: it gets a red dot on the live chart, counts against the health score, and appears in the platform activity feed. Anomalies are also visible in the Jupyter notebook using Isolation Forest.</p>
+
+    <h3>HTTP API reference</h3>
+    <div class="table-wrap">
+      <table class="twin-table">
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/twins</code></td><td>List all twins with health scores</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/twins</code></td><td>Create a twin</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/twins/{id}</code></td><td>Get a single twin</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/twins/{id}</code></td><td>Update a twin</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/twins/{id}</code></td><td>Delete a twin</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/twins/{id}/health</code></td><td>Health score breakdown</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/twins/{id}/telemetry</code></td><td>Recent telemetry points</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/twins/{id}/telemetry</code></td><td>Ingest a telemetry point</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/twins/{id}/simulate</code></td><td>Inject synthetic points</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/activity</code></td><td>Platform activity feed</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Service health status</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Interactive OpenAPI/Swagger docs are available at <code>/docs</code>.</p>
+
+    <h3>Configuration</h3>
+    <div class="table-wrap">
+      <table class="twin-table">
+        <thead><tr><th>Variable</th><th>Default</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>MQTT_HOST</code></td><td><code>mosquitto</code></td><td>MQTT broker host</td></tr>
+          <tr><td><code>MQTT_PORT</code></td><td><code>1883</code></td><td>MQTT broker port</td></tr>
+          <tr><td><code>INFLUX_URL</code></td><td><code>http://influxdb:8086</code></td><td>InfluxDB endpoint</td></tr>
+          <tr><td><code>INFLUX_TOKEN</code></td><td><code>ascent-super-secret-token</code></td><td>InfluxDB API token</td></tr>
+          <tr><td><code>INFLUX_ORG</code></td><td><code>ihu</code></td><td>InfluxDB organization</td></tr>
+          <tr><td><code>INFLUX_BUCKET</code></td><td><code>ascent-twins</code></td><td>InfluxDB bucket</td></tr>
+          <tr><td><code>SYNTHETIC_ENABLED</code></td><td><code>true</code></td><td>Enable synthetic telemetry generator</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Troubleshooting</h3>
+    <ul>
+      <li><b>No data in Grafana?</b> The Twin dropdown only lists twins with data in the last 7 days. Generate synthetic data or publish telemetry first.</li>
+      <li><b>UI changes not visible?</b> Static files are baked into the API image &mdash; run <code>docker compose up -d --build api</code> and hard-refresh (Ctrl+F5).</li>
+      <li><b>Jupyter token?</b> <code>ascent</code>.</li>
+      <li><b>Grafana login?</b> <code>admin</code> / <code>ascent-admin</code>.</li>
+      <li><b>ESP32 cannot connect?</b> Point the sketch at your PC's LAN IP (the Docker host), not <code>localhost</code>.</li>
+      <li><b>Health shows critical?</b> The twin is not sending data &mdash; check the MQTT topic or generate synthetic data.</li>
+    </ul>
   </div>
 </section>
 
@@ -210,6 +267,15 @@
 
     <h3>License</h3>
     <p>MIT License. Third-party services (Grafana, InfluxDB, Mosquitto, JupyterLab) are used as-is. See the <a href="https://github.com/INTO-CPS-Association/DTaaS" target="_blank">DTaaS upstream project</a> for the original architecture concepts.</p>
+
+    <h3>Version &amp; links</h3>
+    <ul>
+      <li>Version: <b>0.1.0</b></li>
+      <li>Repository: <a href="https://github.com/JimNikou/Ascent-DTwin" target="_blank">github.com/JimNikou/Ascent-DTwin</a></li>
+      <li>Interactive API docs: <a href="/docs" target="_blank">/docs</a></li>
+      <li>Grafana: <a href="http://localhost:3000" target="_blank">localhost:3000</a> (admin / ascent-admin)</li>
+      <li>JupyterLab: <a href="http://localhost:8888" target="_blank">localhost:8888</a> (token: ascent)</li>
+    </ul>
   </div>
 </section>
 
