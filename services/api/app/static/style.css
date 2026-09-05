@@ -58,6 +58,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .btn.small{padding:4px 10px;font-size:12px}
 .btn.danger{background:var(--red);border-color:var(--red)}
 .btn.danger:hover{background:#a40e26;border-color:#a40e26}
+.btn.danger.armed{background:#a40e26;border-color:#a40e26;box-shadow:0 0 0 3px rgba(207,34,46,.25)}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 
 /* ---------------- layout ---------------- */
@@ -101,6 +102,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .tag{font-size:11px;background:var(--surface-2);border:1px solid var(--border);padding:2px 8px;border-radius:999px;color:var(--text-2)}
+.tag.sensor{background:var(--accent-soft);border-color:rgba(9,105,218,.25);color:var(--accent)}
 .topic{font-family:var(--mono);font-size:11px;background:var(--surface-2);border:1px solid var(--border);padding:5px 8px;border-radius:var(--radius);color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
@@ -115,6 +117,9 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .chart-wrap{border:1px solid var(--border);border-radius:var(--radius);padding:14px;background:var(--surface);margin-top:12px}
 .chart-box{position:relative;height:220px}
 .chart-box canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+.chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--text-3);font-size:13px;background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius);padding:16px}
+.chart-empty b{display:block;font-size:14px;color:var(--text-2);margin-bottom:4px}
+.chart-empty p{margin:0 0 10px;max-width:340px}
 .chart-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px;color:var(--text-3)}
 
 /* section titles */

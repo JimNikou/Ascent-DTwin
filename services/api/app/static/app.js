@@ -129,9 +129,10 @@ async function renderDetail(){
       <h3>${esc(t.name)} <span class="twin-id">/${esc(t.id)}</span></h3>
       <button class="btn small ghost" id="d-edit">Edit</button>
       <button class="btn small ghost" id="d-graf">Grafana</button>
+      <button class="btn small danger" id="d-del">Delete</button>
     </div>
     <p>${esc(t.description||'')}</p>
-    <div class="meta"><span class="tag">${esc(t.asset_type)}</span><span class="tag">${esc(t.location)}</span><span class="tag">${esc(t.status||'active')}</span></div>
+    <div class="meta"><span class="tag">${esc(t.asset_type)}</span><span class="tag">${esc(t.location)}</span><span class="tag">${esc(t.status||'active')}</span>${(t.fields||[]).map(f=>`<span class="tag sensor">${esc(f)}</span>`).join('')}</div>
     <div class="kpis" id="kpis"></div>
     <div class="chart-wrap"><div class="chart-box"><canvas id="live"></canvas></div>
       <div class="chart-meta">
@@ -143,7 +144,35 @@ async function renderDetail(){
   </div>`;
   $('d-edit').onclick=()=>openModal(t);
   $('d-graf').onclick=()=>window.open('http://localhost:3000','_blank');
+  $('d-del').onclick=()=>armDelete($('d-del'), 'Delete', async()=>{
+    try{
+      await api('/api/twins/'+t.id,{method:'DELETE'}); selected=null;
+      toast(`Deleted "${t.name}"`, 'success'); await loadTwins();
+    }catch(e){ toast('Delete failed: '+e.message, 'error'); }
+  });
   await updateLive(true);
+}
+
+function showChartEmpty(){
+  const ctx = $('live'); if(!ctx) return;
+  const box = ctx.parentNode;
+  if(chart){ chart.destroy(); chart = null; }
+  ctx.style.display = 'none';
+  let es = $('live-empty');
+  if(!es){
+    es = document.createElement('div');
+    es.id = 'live-empty';
+    es.className = 'chart-empty';
+    es.innerHTML = `<div><b>No telemetry yet</b><p>This twin has no data. Generate synthetic data or flash an ESP32 to start streaming.</p><button class="btn small" id="btn-sim-inline">Generate Synthetic Data</button></div>`;
+    box.appendChild(es);
+    es.querySelector('#btn-sim-inline').onclick = ()=>$('btn-sim').click();
+  }
+  es.style.display = 'flex';
+}
+function showChart(){
+  const ctx = $('live'); if(!ctx) return;
+  ctx.style.display = 'block';
+  const es = $('live-empty'); if(es) es.style.display = 'none';
 }
 
 async function updateLive(first=false){
@@ -170,6 +199,8 @@ async function updateLive(first=false){
     const m = $('live-meta');
     if(m) m.textContent = pts.length ? `${pts.length} points &middot; last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
     const ctx = $('live'); if(!ctx) return;
+    if(!pts.length){ showChartEmpty(); return; }
+    showChart();
     if(chart){
       // update in place — no destroy/recreate, no layout shift, no scroll jump
       chart.data.labels = labels;
@@ -196,6 +227,7 @@ function startLive(){
 let editing = null;
 function openModal(t=null){
   editing = t;
+  resetDeleteBtn();
   $('modal-title').textContent = t ? `Edit ${t.name}` : 'New Twin';
   $('f-name').value = t?.name||''; $('f-desc').value=t?.description||'';
   $('f-type').value=t?.asset_type||'esp32.sensor'; $('f-location').value=t?.location||'IHU Lab';
@@ -204,6 +236,24 @@ function openModal(t=null){
   $('modal-back').classList.add('open');
 }
 function closeModal(){ $('modal-back').classList.remove('open'); editing=null; }
+
+// ---- two-step delete confirmation (no native confirm() — can be blocked)
+let delArmed = null, delTimer = null;
+function armDelete(btn, label, fn){
+  if(delArmed !== btn){
+    delArmed = btn;
+    btn.textContent = 'Confirm Delete?';
+    btn.classList.add('armed');
+    delTimer = setTimeout(()=>{ btn.textContent = label; btn.classList.remove('armed'); delArmed = null; }, 3000);
+    return;
+  }
+  clearTimeout(delTimer); delArmed = null;
+  btn.textContent = label; btn.classList.remove('armed');
+  fn();
+}
+function resetDeleteBtn(){
+  if(delArmed){ clearTimeout(delTimer); delArmed.textContent='Delete'; delArmed.classList.remove('armed'); delArmed=null; }
+}
 
 async function saveModal(){
   const body = {
@@ -235,11 +285,12 @@ function espSnippet(){
 $('btn-new').onclick=()=>openModal(null);
 $('modal-cancel').onclick=closeModal;
 $('modal-save').onclick=()=>saveModal();
-$('modal-delete').onclick=async()=>{ if(!editing) return; if(!confirm('Delete '+editing.name+'?')) return;
+$('modal-delete').onclick=()=>{ if(!editing) return; armDelete($('modal-delete'), 'Delete', async()=>{
   try{
     await api('/api/twins/'+editing.id,{method:'DELETE'}); closeModal(); selected=null;
     toast(`Deleted "${editing.name}"`, 'success'); await loadTwins();
-  }catch(e){ toast('Delete failed: '+e.message, 'error'); } };
+  }catch(e){ toast('Delete failed: '+e.message, 'error'); }
+}); };
 $('btn-refresh').onclick=()=>{refreshHealth();loadTwins();};
 $('search').oninput=()=>{
   $('search-clear').style.display = $('search').value ? 'block' : 'none';
