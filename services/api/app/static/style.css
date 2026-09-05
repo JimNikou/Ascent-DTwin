@@ -221,6 +221,10 @@ table.twin-table{width:100%;border-collapse:collapse;font-size:13px}
 .field label{display:block;font-size:12px;color:var(--text-2);margin-bottom:4px;font-weight:500}
 .field input,.field textarea,.field select{width:100%;background:var(--surface);border:1px solid var(--border-strong);color:var(--text);border-radius:var(--radius);padding:8px 10px;font-size:13px;font-family:var(--font)}
 .field textarea{resize:vertical}
+.dev-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.dev-tab{font-size:12px;padding:5px 12px;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);color:var(--text-2);cursor:pointer;font-family:var(--font)}
+.dev-tab:hover{color:var(--accent);border-color:var(--accent)}
+.dev-tab.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:500}
 pre.code{background:#f6f8fa;border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow:auto;font-size:12px;color:var(--text);max-height:320px;font-family:var(--mono)}
 
 /* ---------------- toasts ---------------- */

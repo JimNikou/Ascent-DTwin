@@ -348,10 +348,56 @@ async function saveModal(){
 
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// ---- ESP32 modal
-function espSnippet(){
+// ---- device connection modal (ESP32 is one example among several)
+function deviceSnippets(){
   const t = selected || {id:'esp32-demo', mqtt_topic:'ascent/esp32-demo/telemetry'};
-  return `#include <WiFi.h>\n#include <PubSubClient.h>\n// ID: ${t.id}\nconst char* WIFI_SSID="YOUR_WIFI";\nconst char* WIFI_PASS="YOUR_PASS";\nconst char* MQTT_HOST="YOUR_PC_IP"; // docker host IP, port 1883\nconst char* TOPIC="${t.mqtt_topic||('ascent/'+t.id+'/telemetry')}";\nWiFiClient esp; PubSubClient mqtt(esp);\nvoid setup(){ Serial.begin(115200); WiFi.begin(WIFI_SSID,WIFI_PASS);\n while(WiFi.status()!=WL_CONNECTED) delay(500);\n mqtt.setServer(MQTT_HOST,1883); }\nvoid loop(){ if(!mqtt.connected()) mqtt.connect("esp32-${t.id}");\n float temp=22+random(0,300)/100.0; float hum=45+random(0,1000)/100.0;\n char buf[128]; snprintf(buf,sizeof(buf),"{{\\"temperature\\":%.2f,\\"humidity\\":%.2f}}",temp,hum);\n mqtt.publish(TOPIC,buf); delay(2000); }`;
+  const topic = t.mqtt_topic || ('ascent/'+t.id+'/telemetry');
+  return {
+    esp32: `// ESP32 (Arduino) example — twin "${t.id}"
+#include <WiFi.h>
+#include <PubSubClient.h>
+const char* WIFI_SSID="YOUR_WIFI";
+const char* WIFI_PASS="YOUR_PASS";
+const char* MQTT_HOST="YOUR_PC_IP"; // Docker host LAN IP, port 1883
+const char* TOPIC="${topic}";
+WiFiClient esp; PubSubClient mqtt(esp);
+void setup(){ Serial.begin(115200); WiFi.begin(WIFI_SSID,WIFI_PASS);
+ while(WiFi.status()!=WL_CONNECTED) delay(500);
+ mqtt.setServer(MQTT_HOST,1883); }
+void loop(){ if(!mqtt.connected()) mqtt.connect("esp32-${t.id}");
+ float temp=22+random(0,300)/100.0; float hum=45+random(0,1000)/100.0;
+ char buf[128]; snprintf(buf,sizeof(buf),"{{\\"temperature\\":%.2f,\\"humidity\\":%.2f}}",temp,hum);
+ mqtt.publish(TOPIC,buf); delay(2000); }
+// Full sketch: examples/esp32/esp32_telemetry.ino`,
+    python: `# Python example — publish telemetry for twin "${t.id}"
+import json, time, random
+import paho.mqtt.client as mqtt
+
+TWIN_ID = "${t.id}"
+MQTT_HOST = "YOUR_PC_IP"   # Docker host LAN IP, port 1883
+
+client = mqtt.Client()
+client.connect(MQTT_HOST, 1883)
+while True:
+    payload = {"temperature": round(22+3*random.random(),2),
+               "humidity": round(45+10*random.random(),2)}
+    client.publish(f"ascent/{TWIN_ID}/telemetry", json.dumps(payload))
+    time.sleep(2)
+# Or use the HTTP endpoint: POST /api/twins/${t.id}/telemetry`,
+    mqtt: `# Generic MQTT client (mosquitto_pub) — twin "${t.id}"
+# Topic: ${topic}
+mosquitto_pub -h YOUR_PC_IP -p 1883 -t "${topic}" \\
+  -m '{"temperature":23.4,"humidity":48.1,"pressure":1013.2}'`,
+    http: `# HTTP POST — same endpoint the web UI uses (twin "${t.id}")
+curl -X POST http://localhost:8000/api/twins/${t.id}/telemetry \\
+  -H "Content-Type: application/json" \\
+  -d '{"temperature":23.4,"humidity":48.1,"pressure":1013.2}'`
+  };
+}
+let devTab = 'esp32';
+function openDeviceModal(){
+  $('dev-code').textContent = deviceSnippets()[devTab];
+  $('dev-back').classList.add('open');
 }
 
 $('btn-new').onclick=()=>openModal(null);
@@ -376,9 +422,14 @@ $('btn-sim').onclick=async()=>{ if(!selected) return toast('Select a twin first'
     const r = await api(`/api/twins/${selected.id}/simulate?n=30`,{method:'POST'});
     toast(`Injected ${r.inserted} synthetic points`, 'success'); updateLive(true);
   }catch(e){ toast('Simulate failed: '+e.message, 'error'); } };
-$('btn-esp32').onclick=()=>{ $('esp-code').textContent=espSnippet(); $('esp-back').classList.add('open'); };
-$('esp-close').onclick=()=>$('esp-back').classList.remove('open');
-$('esp-copy').onclick=()=>{ navigator.clipboard.writeText($('esp-code').textContent); toast('Snippet copied to clipboard', 'success'); };
+$('btn-device').onclick=openDeviceModal;
+$('dev-close').onclick=()=>$('dev-back').classList.remove('open');
+$('dev-copy').onclick=()=>{ navigator.clipboard.writeText($('dev-code').textContent); toast('Snippet copied to clipboard', 'success'); };
+document.querySelectorAll('.dev-tab').forEach(b=>b.onclick=()=>{
+  devTab = b.dataset.dev;
+  document.querySelectorAll('.dev-tab').forEach(x=>x.classList.toggle('active', x===b));
+  $('dev-code').textContent = deviceSnippets()[devTab];
+});
 document.querySelectorAll('[data-link]').forEach(b=>b.onclick=()=>window.open(b.dataset.link,'_blank'));
 document.querySelectorAll('.navpage').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 

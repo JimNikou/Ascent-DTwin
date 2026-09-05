@@ -133,7 +133,7 @@ The UI has four pages (top navigation):
 - **Anomaly markers** — red dots on the live chart flag readings that deviate from the twin's recent history (z-score > 3)
 - **Edit / Duplicate / Delete** — manage twins from the library cards
 - **Generate Synthetic Data** — inject a burst of synthetic points into the selected twin
-- **ESP32 Firmware & Topic** — view a ready-to-paste Arduino snippet for the selected twin
+- **Connect a Device** — ready-to-paste snippets for the selected twin (ESP32, Python, MQTT CLI, HTTP)
 - **Status indicators** — API / MQTT / InfluxDB health in the top bar
 
 ### Grafana
@@ -170,7 +170,12 @@ Interactive API documentation is available at <http://localhost:8000/docs>.
 | `GET` | `/api/activity` | Platform activity feed (twin CRUD, anomalies, simulations) |
 | `GET` | `/api/health` | Service health status |
 
-### ESP32 live test
+### Device live test (ESP32 example)
+
+ESP32 is one example — any device that can publish JSON over MQTT or HTTP works
+(Python, generic MQTT clients, curl, other microcontrollers). The web UI's
+**Connect a Device** button shows ready-to-paste snippets for ESP32, Python, MQTT CLI
+and HTTP.
 
 1. Start the stack and open the web UI.
 2. Find your machine's LAN IP (`ipconfig` on Windows, `ifconfig` on Linux/macOS).
