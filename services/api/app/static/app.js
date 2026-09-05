@@ -262,7 +262,7 @@ async function updateLive(first=false){
       k.innerHTML = fields.map(f => `<div class="kpi"><small>${esc(f)}</small><b>${last[f] ?? '—'}</b></div>`).join('');
     }
     const m = $('live-meta');
-    if(m) m.textContent = pts.length ? `${pts.length} points &middot; last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
+    if(m) m.textContent = pts.length ? `${pts.length} points · last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
     const ctx = $('live'); if(!ctx) return;
     if(!pts.length){ showChartEmpty(); return; }
     showChart();
