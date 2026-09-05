@@ -6,6 +6,11 @@ influxdb-data/
 grafana-data/
 .ipynb_checkpoints/
 .DS_Store
-# personal twins stay local — only the seeded demo twin is tracked
+# personal twins stay local — only the seeded demo twins are tracked
 library/*.json
 !library/esp32-demo.json
+!library/vibration-rig.json
+!library/greenhouse-1.json
+!library/server-room.json
+!library/weather-station.json
+!library/water-tank.json

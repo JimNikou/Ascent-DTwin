@@ -1,0 +1,14 @@
+{
+  "id": "water-tank",
+  "name": "Water Tank Level",
+  "description": "Reservoir level, outflow and pressure. Sends data every 60 seconds to demonstrate a lower-frequency telemetry twin.",
+  "asset_type": "utility.water",
+  "location": "IHU Reservoir",
+  "mqtt_topic": "ascent/water-tank/telemetry",
+  "fields": ["level", "flow", "pressure"],
+  "status": "active",
+  "synthetic": true,
+  "synthetic_interval": 60,
+  "created_at": "2026-09-01T00:00:00+00:00",
+  "updated_at": "2026-09-01T00:00:00+00:00"
+}

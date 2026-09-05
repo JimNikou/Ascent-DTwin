@@ -12,6 +12,7 @@
     "co2"
   ],
   "status": "active",
+  "synthetic": true,
   "created_at": "2026-09-04T00:00:00+00:00",
   "updated_at": "2026-09-05T08:36:16.104665+00:00"
 }

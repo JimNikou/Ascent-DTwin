@@ -1,0 +1,13 @@
+{
+  "id": "vibration-rig",
+  "name": "Vibration Monitoring Rig",
+  "description": "Industrial rotating machine with vibration, RPM and bearing temperature monitoring. Demonstrates predictive-maintenance telemetry.",
+  "asset_type": "industrial.machine",
+  "location": "Production Floor",
+  "mqtt_topic": "ascent/vibration-rig/telemetry",
+  "fields": ["vibration", "rpm", "temperature"],
+  "status": "active",
+  "synthetic": true,
+  "created_at": "2026-09-01T00:00:00+00:00",
+  "updated_at": "2026-09-01T00:00:00+00:00"
+}

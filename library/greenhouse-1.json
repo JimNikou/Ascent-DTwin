@@ -1,0 +1,13 @@
+{
+  "id": "greenhouse-1",
+  "name": "Greenhouse Climate",
+  "description": "Climate control for the IHU experimental greenhouse: air temperature, humidity, soil moisture and light intensity.",
+  "asset_type": "agriculture.greenhouse",
+  "location": "IHU Greenhouse",
+  "mqtt_topic": "ascent/greenhouse-1/telemetry",
+  "fields": ["temperature", "humidity", "soil_moisture", "light"],
+  "status": "active",
+  "synthetic": true,
+  "created_at": "2026-09-01T00:00:00+00:00",
+  "updated_at": "2026-09-01T00:00:00+00:00"
+}

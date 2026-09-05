@@ -1,0 +1,13 @@
+{
+  "id": "server-room",
+  "name": "Server Room",
+  "description": "IHU data-center environment: rack temperature, humidity, power draw and average CPU load across the cluster.",
+  "asset_type": "it.infrastructure",
+  "location": "IHU Data Center",
+  "mqtt_topic": "ascent/server-room/telemetry",
+  "fields": ["temperature", "humidity", "power", "cpu_load"],
+  "status": "active",
+  "synthetic": true,
+  "created_at": "2026-09-01T00:00:00+00:00",
+  "updated_at": "2026-09-01T00:00:00+00:00"
+}

@@ -17,14 +17,14 @@ cybersecurity funding project.
 
 ## Features
 
-- **Twin library** — create, view, edit, duplicate and delete digital twins (JSON-backed, `library/`)
+- **Twin library** — create, view, edit, duplicate and delete digital twins (JSON-backed, `library/`), pre-seeded with **six demo twins** covering industrial, agricultural, IT and utility scenarios
 - **Live telemetry** — ingest via MQTT (`ascent/<twin-id>/telemetry`) or HTTP (`POST /api/twins/{id}/telemetry`), stored in InfluxDB with an in-memory fallback
 - **Twin health score** — 0-100 score per twin (data freshness + volume + anomaly rate) shown in the UI and exposed via the API
 - **Anomaly detection** — real-time z-score flagging on every telemetry point (red markers on the live chart) plus an Isolation Forest notebook in Jupyter
 - **Zero-touch onboarding** — unknown twin IDs auto-register on their first MQTT message
-- **Grafana dashboards** — pre-provisioned live telemetry dashboard (InfluxDB Flux)
+- **Grafana dashboards** — pre-provisioned live telemetry dashboard (InfluxDB Flux) with per-twin, per-field panels
 - **JupyterLab workspace** — demo and anomaly-detection notebooks, in the style of DTaaS user workspaces
-- **Synthetic data generator** — feeds the `esp32-demo` twin every 2 seconds (with occasional spikes so anomaly detection is visible), so the UI and Grafana work without any hardware
+- **Synthetic data generator** — feeds every demo twin with realistic field values (per-twin intervals, occasional spikes so anomaly detection is visible) and backfills one hour of history on first run, so the UI and Grafana work without any hardware
 - **Web UI** — professional light-theme interface with live charts, KPIs, health badges and service health indicators
 
 ## Prerequisites
@@ -106,8 +106,18 @@ ascent-jupyter    (JupyterLab)            port 8888
 
 ### Web UI
 
-Open <http://localhost:8000>. The `esp32-demo` twin is pre-seeded and already streaming
-synthetic telemetry, so the live chart and KPIs update immediately.
+Open <http://localhost:8000>. Six demo twins are pre-seeded and already streaming
+synthetic telemetry (with one hour of history), so the library, live charts, KPIs and
+health badges are populated immediately. The demo twins cover different scenarios:
+
+| Twin | Scenario | Sensors |
+|---|---|---|
+| `esp32-demo` | ESP32 room sensor | temperature, humidity, pressure, co2 |
+| `vibration-rig` | Industrial machine | vibration, rpm, temperature |
+| `greenhouse-1` | Greenhouse climate | temperature, humidity, soil_moisture, light |
+| `server-room` | Data center | temperature, humidity, power, cpu_load |
+| `weather-station` | Campus rooftop | temperature, humidity, pressure, wind_speed, rainfall |
+| `water-tank` | Reservoir (60 s interval) | level, flow, pressure |
 
 - **New Twin** — create a digital twin (name, description, asset type, location, MQTT topic, fields)
 - **Twin Library** — select a twin to view its live chart, KPIs and health badge

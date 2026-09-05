@@ -267,34 +267,96 @@ def mqtt_loop():
 threading.Thread(target=mqtt_loop, daemon=True).start()
 
 # ---------------------------------------------------------------- synthetic data (Grafana demo)
+# realistic per-field generators so every demo twin streams plausible values
+FIELD_GENERATORS = {
+    "temperature": lambda t: round(22 + 3 * random.random() + 0.5 * math.sin(t / 30), 2),
+    "humidity": lambda t: round(45 + 10 * random.random(), 2),
+    "pressure": lambda t: round(1013 + 4 * random.random() - 2, 2),
+    "co2": lambda t: round(420 + 80 * random.random(), 1),
+    "vibration": lambda t: round(2.5 + 1.5 * random.random() + 0.3 * math.sin(t / 15), 3),
+    "rpm": lambda t: round(1450 + 80 * random.random(), 0),
+    "soil_moisture": lambda t: round(35 + 15 * random.random(), 1),
+    "light": lambda t: round(400 + 300 * random.random(), 0),
+    "power": lambda t: round(1200 + 200 * random.random(), 0),
+    "cpu_load": lambda t: round(35 + 25 * random.random(), 1),
+    "wind_speed": lambda t: round(4 + 6 * random.random(), 1),
+    "rainfall": lambda t: round(0.5 * random.random(), 2),
+    "level": lambda t: round(60 + 15 * random.random(), 1),
+    "flow": lambda t: round(12 + 4 * random.random(), 1),
+}
+SPIKE_MAP = {
+    "temperature": 10, "humidity": 25, "pressure": 20, "co2": 300,
+    "vibration": 5, "rpm": 300, "soil_moisture": 30, "light": 800,
+    "power": 500, "cpu_load": 50, "wind_speed": 15, "rainfall": 5,
+    "level": 30, "flow": 10,
+}
+
+def _synthetic_point(twin: Dict[str, Any], t: float) -> Dict[str, Any]:
+    fields = twin.get("fields") or ["temperature", "humidity"]
+    point = {"time": datetime.now(timezone.utc).isoformat()}
+    for f in fields:
+        gen = FIELD_GENERATORS.get(f)
+        point[f] = gen(t) if gen else round(100 * random.random(), 2)
+    # occasional spike so anomaly detection is visible in the demo
+    if random.random() < 0.03:
+        f = random.choice([k for k in point if k != "time"])
+        point[f] = point[f] + SPIKE_MAP.get(f, 40)
+    return point
+
 def synthetic_loop():
     random.seed()
+    last_sent: Dict[str, float] = {}
     while True:
         try:
             if SYNTHETIC_ENABLED:
-                t = time.time()
-                for twin_id in ["esp32-demo"]:
+                now = time.time()
+                for twin in list_twins():
+                    if not twin.get("synthetic"):
+                        continue
+                    interval = float(twin.get("synthetic_interval", 2))
+                    if now - last_sent.get(twin["id"], 0) < interval:
+                        continue
+                    last_sent[twin["id"]] = now
                     try:
-                        load_twin(twin_id)
+                        load_twin(twin["id"])
                     except HTTPException:
                         continue
-                    point = {
-                        "temperature": round(22 + 3 * random.random() + 0.5 * math.sin(t / 30), 2),
-                        "humidity": round(45 + 10 * random.random(), 2),
-                        "pressure": round(1013 + 4 * random.random() - 2, 2),
-                        "co2": round(420 + 80 * random.random(), 1),
-                        "time": datetime.now(timezone.utc).isoformat(),
-                    }
-                    # occasional spike so anomaly detection is visible in the demo
-                    if random.random() < 0.03:
-                        f = random.choice(["temperature", "humidity", "pressure", "co2"])
-                        point[f] = point[f] + {"temperature": 10, "humidity": 25, "pressure": 20, "co2": 300}[f]
-                    ingest(twin_id, point)
+                    ingest(twin["id"], _synthetic_point(twin, now))
         except Exception as e:
             print(f"[ascent] synthetic error: {e}", flush=True)
         time.sleep(2)
 
+def backfill_synthetic():
+    """Seed ~1h of history for synthetic twins so charts look populated on first run."""
+    if not SYNTHETIC_ENABLED:
+        return
+    for twin in list_twins():
+        if not twin.get("synthetic"):
+            continue
+        twin_id = twin["id"]
+        try:
+            if query_influx(twin_id, 1):
+                continue  # already has data
+        except Exception:
+            pass
+        fields = twin.get("fields") or ["temperature", "humidity"]
+        now = time.time()
+        print(f"[ascent] backfilling {twin_id} ({len(fields)} fields x 720 points)...", flush=True)
+        for i in range(720):  # 1 hour at 5s
+            t = now - (720 - i) * 5
+            point = {"time": datetime.fromtimestamp(t, tz=timezone.utc).isoformat()}
+            for f in fields:
+                gen = FIELD_GENERATORS.get(f)
+                point[f] = gen(t) if gen else round(100 * random.random(), 2)
+            if random.random() < 0.02:
+                f = random.choice([k for k in point if k != "time"])
+                point[f] = point[f] + SPIKE_MAP.get(f, 40)
+            push_memory(twin_id, point)
+            write_influx(twin_id, point)
+        print(f"[ascent] backfilled {twin_id}", flush=True)
+
 threading.Thread(target=synthetic_loop, daemon=True).start()
+threading.Thread(target=backfill_synthetic, daemon=True).start()
 
 # ---------------------------------------------------------------- app
 app = FastAPI(title="Ascent-DTwin API", version="0.1.0")
