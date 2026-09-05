@@ -270,6 +270,48 @@ without any per-twin configuration.
 No configuration files, no dashboard duplication, no query editing — the platform
 discovers twins from the data itself.
 
+## Twin health score
+
+Every twin gets a **0-100 health score** that reflects how well it is streaming data.
+It is computed live by the API, shown in the web UI (badge in the detail view, colored
+tag on each library card) and exposed via the API.
+
+| Component | Points | How it is measured |
+|---|---|---|
+| **Freshness** | 0-40 | Age of the last telemetry point: ≤10 s = 40, ≤60 s = 30, ≤5 min = 20, ≤30 min = 10, older = 0 |
+| **Data volume** | 0-30 | Points received in the last 5 minutes: ≥50 = 30, ≥20 = 20, ≥5 = 10, fewer = 0 |
+| **Anomaly rate** | 0-30 | Share of anomalous points in the last 100: 0% = 30, <5% = 20, <20% = 10, ≥20% = 0 |
+
+**Status thresholds:**
+
+| Score | Status | Color |
+|---|---|---|
+| 80-100 | healthy | green |
+| 50-79 | degraded | amber |
+| 0-49 | critical | red |
+
+### How anomalies are detected
+
+Each incoming telemetry point is checked against the twin's recent history. The API
+keeps a rolling window of the **last 200 values per field** and computes a **z-score**
+`(value − mean) / std`. A point is flagged as an anomaly when any field deviates more
+than **3 standard deviations** from the mean (a twin needs at least 10 points per
+field before detection kicks in). Flagged points carry an `anomaly: true` field in the
+telemetry API response and appear as **red dots on the live chart**.
+
+### How it is tracked
+
+- The score is **computed on demand, not stored** — `GET /api/twins/{id}/health`
+  returns the current score with its breakdown, and `GET /api/twins` includes it for
+  every twin.
+- The web UI refreshes the badge every 2 seconds alongside the live chart, so a twin
+  that stops sending data visibly drops from healthy → degraded → critical within
+  minutes.
+- The rolling statistics live in memory and rebuild automatically from incoming data —
+  no configuration, no database tables.
+- The Jupyter notebook `02-anomaly-detection.ipynb` prints the same health score and
+  compares the API's real-time z-score flags with an Isolation Forest model.
+
 ## Repository layout
 
 ```
