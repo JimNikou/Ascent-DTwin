@@ -5,8 +5,14 @@
   "asset_type": "esp32.sensor",
   "location": "IHU Lab",
   "mqtt_topic": "ascent/esp32-demo/telemetry",
-  "fields": ["temperature", "humidity", "pressure", "co2"],
+  "fields": [
+    "temperature",
+    "humidity",
+    "pressure",
+    "co2",
+    "test"
+  ],
   "status": "active",
   "created_at": "2026-09-04T00:00:00+00:00",
-  "updated_at": "2026-09-04T00:00:00+00:00"
+  "updated_at": "2026-09-05T08:36:16.104665+00:00"
 }

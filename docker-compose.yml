@@ -69,7 +69,8 @@ services:
     restart: unless-stopped
 
   jupyter:
-    image: jupyter/base-notebook:python-3.11
+    build: ./jupyter
+    image: ascent-dtwin-jupyter
     container_name: ascent-jupyter
     ports:
       - "8888:8888"

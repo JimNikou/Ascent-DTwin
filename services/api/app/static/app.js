@@ -86,7 +86,7 @@ function renderCards(){
     const d = document.createElement('div');
     d.className='card';
     d.innerHTML = `<h3>${esc(t.name)}</h3><p>${esc(t.description||'')}</p>
-      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">${esc(t.status||'active')}</span></div>
+      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">${esc(t.status||'active')}</span><span class="tag h-${(t.health&&t.health.status)||'unknown'}">Health ${(t.health&&t.health.score)||'—'}</span></div>
       <div class="topic">${esc(t.mqtt_topic||'')}</div>
       <div class="row" style="margin-top:10px">
         <button class="btn small" data-act="view">View</button>
@@ -127,6 +127,7 @@ async function renderDetail(){
   el.innerHTML = `<div class="card">
     <div class="detail-head">
       <h3>${esc(t.name)} <span class="twin-id">/${esc(t.id)}</span></h3>
+      <span class="health-badge" id="health-badge">Health &hellip;</span>
       <button class="btn small ghost" id="d-edit">Edit</button>
       <button class="btn small ghost" id="d-graf">Grafana</button>
       <button class="btn small danger" id="d-del">Delete</button>
@@ -151,7 +152,21 @@ async function renderDetail(){
     }catch(e){ toast('Delete failed: '+e.message, 'error'); }
     await loadTwins();   // always refresh the UI so the twin disappears immediately
   });
+  refreshHealthBadge();
   await updateLive(true);
+}
+
+async function refreshHealthBadge(){
+  const hb = $('health-badge');
+  if(!hb || !selected) return;
+  try{
+    const h = await api(`/api/twins/${selected.id}/health`);
+    hb.className = 'health-badge ' + (h.status||'unknown');
+    hb.innerHTML = `<span class="dot"></span> Health ${h.score} <small>${h.status}</small>`;
+  }catch(e){
+    hb.className = 'health-badge unknown';
+    hb.innerHTML = `<span class="dot"></span> Health &mdash;`;
+  }
 }
 
 function showChartEmpty(){
@@ -207,14 +222,21 @@ async function updateLive(first=false){
       chart.data.labels = labels;
       chart.data.datasets[0].label = field;
       chart.data.datasets[0].data = vals;
+      chart.data.datasets[0].pointRadius = pts.map(p=>p.anomaly?4:0);
+      chart.data.datasets[0].pointBackgroundColor = pts.map(p=>p.anomaly?'#cf222e':'transparent');
+      chart.data.datasets[0].pointBorderColor = pts.map(p=>p.anomaly?'#cf222e':'transparent');
       chart.update('none');
     } else {
       chart = new Chart(ctx, {type:'line',
-        data:{labels, datasets:[{label:field, data:vals, borderColor:'#0969da', backgroundColor:'rgba(9,105,218,.10)', fill:true, tension:.3, pointRadius:0, borderWidth:1.5}]},
+        data:{labels, datasets:[{label:field, data:vals, borderColor:'#0969da', backgroundColor:'rgba(9,105,218,.10)', fill:true, tension:.3, borderWidth:1.5,
+          pointRadius: pts.map(p=>p.anomaly?4:0),
+          pointBackgroundColor: pts.map(p=>p.anomaly?'#cf222e':'transparent'),
+          pointBorderColor: pts.map(p=>p.anomaly?'#cf222e':'transparent')}]},
         options:{responsive:true, maintainAspectRatio:false,
           plugins:{legend:{labels:{color:'#57606a', boxWidth:12, font:{size:11}}}},
           scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:8,font:{size:11}}, grid:{color:'#eef0f3'}}, y:{ticks:{color:'#8b949e',font:{size:11}}, grid:{color:'#eef0f3'}}}}});
     }
+    refreshHealthBadge();
   }catch(e){ console.warn(e); }
 }
 

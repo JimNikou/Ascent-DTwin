@@ -1,5 +1,9 @@
 # Ascent-DTwin
 
+**Digital Twin Library & Intelligence Platform** — create, view, modify and delete
+digital twins, stream live telemetry, and monitor each twin's health with real-time
+anomaly detection.
+
 Ascent-DTwin is an open-source digital twin library manager developed at the International
 Hellenic University (IHU). It provides a complete, minimal digital-twin lifecycle —
 **create, view, modify and delete** digital twins and stream **live telemetry** from
@@ -15,11 +19,13 @@ cybersecurity funding project.
 
 - **Twin library** — create, view, edit, duplicate and delete digital twins (JSON-backed, `library/`)
 - **Live telemetry** — ingest via MQTT (`ascent/<twin-id>/telemetry`) or HTTP (`POST /api/twins/{id}/telemetry`), stored in InfluxDB with an in-memory fallback
+- **Twin health score** — 0-100 score per twin (data freshness + volume + anomaly rate) shown in the UI and exposed via the API
+- **Anomaly detection** — real-time z-score flagging on every telemetry point (red markers on the live chart) plus an Isolation Forest notebook in Jupyter
 - **Zero-touch onboarding** — unknown twin IDs auto-register on their first MQTT message
 - **Grafana dashboards** — pre-provisioned live telemetry dashboard (InfluxDB Flux)
-- **JupyterLab workspace** — demo notebook for analysis, in the style of DTaaS user workspaces
-- **Synthetic data generator** — feeds the `esp32-demo` twin every 2 seconds, so the UI and Grafana work without any hardware
-- **Web UI** — professional light-theme interface with live charts, KPIs and service health indicators
+- **JupyterLab workspace** — demo and anomaly-detection notebooks, in the style of DTaaS user workspaces
+- **Synthetic data generator** — feeds the `esp32-demo` twin every 2 seconds (with occasional spikes so anomaly detection is visible), so the UI and Grafana work without any hardware
+- **Web UI** — professional light-theme interface with live charts, KPIs, health badges and service health indicators
 
 ## Prerequisites
 
@@ -104,7 +110,9 @@ Open <http://localhost:8000>. The `esp32-demo` twin is pre-seeded and already st
 synthetic telemetry, so the live chart and KPIs update immediately.
 
 - **New Twin** — create a digital twin (name, description, asset type, location, MQTT topic, fields)
-- **Twin Library** — select a twin to view its live chart and KPIs
+- **Twin Library** — select a twin to view its live chart, KPIs and health badge
+- **Health badge** — 0-100 score per twin (green = healthy, amber = degraded, red = critical), refreshed live
+- **Anomaly markers** — red dots on the live chart flag readings that deviate from the twin's recent history (z-score > 3)
 - **Edit / Duplicate / Delete** — manage twins from the library cards
 - **Generate Synthetic Data** — inject a burst of synthetic points into the selected twin
 - **ESP32 Firmware & Topic** — view a ready-to-paste Arduino snippet for the selected twin
@@ -136,7 +144,8 @@ Interactive API documentation is available at <http://localhost:8000/docs>.
 | `PUT` | `/api/twins/{id}` | Update a twin |
 | `DELETE` | `/api/twins/{id}` | Delete a twin |
 | `POST` | `/api/twins/{id}/telemetry` | Ingest a telemetry point |
-| `GET` | `/api/twins/{id}/telemetry` | Read telemetry points |
+| `GET` | `/api/twins/{id}/telemetry` | Read telemetry points (each point has an `anomaly` flag) |
+| `GET` | `/api/twins/{id}/health` | Twin health score (0-100) and breakdown |
 | `POST` | `/api/twins/{id}/simulate` | Insert synthetic points |
 | `GET` | `/api/health` | Service health status |
 
@@ -212,6 +221,10 @@ API, plotting telemetry, running calculations or building models on twin data.
   4. **Push synthetic data** — post a JSON payload to the API, exactly like an ESP32
      would (same endpoint, same format).
 - Run all cells to reproduce the demo end-to-end.
+- **`work/02-anomaly-detection.ipynb`** goes further: it trains an **Isolation Forest**
+  on the twin's recent telemetry, flags anomalies, plots them against the live data and
+  prints the API health score — the machine-learning counterpart to the real-time
+  z-score flagging in the web UI.
 
 ### Grafana vs Jupyter
 
@@ -256,10 +269,12 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the component diagram and d
 ## Roadmap (cybersecurity)
 
 - API authentication and per-device MQTT credentials with TLS
-- Anomaly detection notebook (isolation forest on telemetry)
 - Twin firmware-hash and tamper-evidence logging
 - Grafana alerting to webhook
 - Traefik reverse proxy with OAuth, as in DTaaS
+
+*Done:* real-time anomaly detection (z-score) and the Isolation Forest notebook —
+the foundation for the security-focused anomaly work above.
 
 ## License
 

@@ -119,9 +119,39 @@ ensure_seed()
 # in-memory telemetry ring buffer: twin_id -> deque
 telemetry_mem: Dict[str, deque] = defaultdict(lambda: deque(maxlen=500))
 
+# rolling per-field stats for lightweight z-score anomaly detection
+_rolling: Dict[str, Dict[str, deque]] = defaultdict(lambda: defaultdict(lambda: deque(maxlen=200)))
+
+def _update_rolling(twin_id: str, point: Dict[str, Any]):
+    for k, v in point.items():
+        if k == "time" or not isinstance(v, (int, float)):
+            continue
+        _rolling[twin_id][k].append(float(v))
+
+def _zscore(twin_id: str, field: str, value: float) -> float:
+    vals = list(_rolling[twin_id].get(field, []))
+    if len(vals) < 10:
+        return 0.0
+    mean = sum(vals) / len(vals)
+    var = sum((x - mean) ** 2 for x in vals) / len(vals)
+    std = var ** 0.5
+    if std < 1e-9:
+        return 0.0
+    return (value - mean) / std
+
+def is_anomalous(twin_id: str, point: Dict[str, Any]) -> bool:
+    for k, v in point.items():
+        if k == "time" or not isinstance(v, (int, float)):
+            continue
+        if abs(_zscore(twin_id, k, float(v))) > 3.0:
+            return True
+    return False
+
 def push_memory(twin_id: str, point: Dict[str, Any]):
     point = dict(point)
     point.setdefault("time", datetime.now(timezone.utc).isoformat())
+    point["anomaly"] = is_anomalous(twin_id, point)
+    _update_rolling(twin_id, point)
     telemetry_mem[twin_id].append(point)
     return point
 
@@ -180,6 +210,7 @@ def query_influx(twin_id: str, limit: int = 100) -> List[Dict[str, Any]]:
                 for k, v in rec.values.items():
                     if not k.startswith("_") and k not in ("result", "table", "twin_id"):
                         d[k] = v
+                d["anomaly"] = is_anomalous(twin_id, d)
                 out.append(d)
         return sorted(out, key=lambda x: x.get("time", ""))[-limit:]
     except Exception as e:
@@ -254,6 +285,10 @@ def synthetic_loop():
                         "co2": round(420 + 80 * random.random(), 1),
                         "time": datetime.now(timezone.utc).isoformat(),
                     }
+                    # occasional spike so anomaly detection is visible in the demo
+                    if random.random() < 0.03:
+                        f = random.choice(["temperature", "humidity", "pressure", "co2"])
+                        point[f] = point[f] + {"temperature": 10, "humidity": 25, "pressure": 20, "co2": 300}[f]
                     ingest(twin_id, point)
         except Exception as e:
             print(f"[ascent] synthetic error: {e}", flush=True)
@@ -290,7 +325,15 @@ def health():
 
 @app.get("/api/twins")
 def get_twins():
-    return list_twins()
+    out = []
+    for t in list_twins():
+        t = dict(t)
+        try:
+            t["health"] = compute_health(t["id"])
+        except Exception:
+            t["health"] = {"score": 0, "status": "unknown"}
+        out.append(t)
+    return out
 
 @app.post("/api/twins", status_code=201)
 def create_twin(body: TwinCreate):
@@ -316,6 +359,11 @@ def create_twin(body: TwinCreate):
 @app.get("/api/twins/{twin_id}")
 def get_twin(twin_id: str):
     return load_twin(twin_id)
+
+@app.get("/api/twins/{twin_id}/health")
+def twin_health(twin_id: str):
+    load_twin(twin_id)
+    return compute_health(twin_id)
 
 @app.put("/api/twins/{twin_id}")
 def update_twin(twin_id: str, body: TwinUpdate):
@@ -357,6 +405,45 @@ def get_telemetry(twin_id: str, limit: int = 100):
     mem = list(telemetry_mem.get(twin_id, []))
     return mem[-limit:]
 
+def compute_health(twin_id: str) -> Dict[str, Any]:
+    """0-100 twin health score: freshness (40) + data volume (30) + anomaly rate (30)."""
+    pts = get_telemetry(twin_id, 100)
+    now = datetime.now(timezone.utc).timestamp()
+
+    def _ts(s: str) -> float:
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return 0.0
+
+    # freshness: how recent is the last point
+    age = (now - _ts(pts[-1].get("time", ""))) if pts else float("inf")
+    freshness = 40 if age <= 10 else 30 if age <= 60 else 20 if age <= 300 else 10 if age <= 1800 else 0
+
+    # volume: points received in the last 5 minutes
+    cutoff = now - 300
+    n = sum(1 for p in pts if _ts(p.get("time", "")) >= cutoff)
+    volume = 30 if n >= 50 else 20 if n >= 20 else 10 if n >= 5 else 0
+
+    # anomalies: share of flagged points in the window
+    anom = sum(1 for p in pts if p.get("anomaly"))
+    rate = anom / len(pts) if pts else 0
+    anom_score = 30 if rate == 0 else 20 if rate < 0.05 else 10 if rate < 0.2 else 0
+
+    score = freshness + volume + anom_score
+    status = "healthy" if score >= 80 else "degraded" if score >= 50 else "critical"
+    return {
+        "twin_id": twin_id,
+        "score": score,
+        "status": status,
+        "freshness": freshness,
+        "volume": volume,
+        "anomalies": anom_score,
+        "last_seen": pts[-1].get("time") if pts else None,
+        "points": len(pts),
+        "anomaly_count": anom,
+    }
+
 @app.post("/api/twins/{twin_id}/simulate")
 def simulate(twin_id: str, n: int = 20):
     twin = load_twin(twin_id)
@@ -376,6 +463,10 @@ def simulate(twin_id: str, n: int = 20):
             else:
                 # generic numeric sensor — plausible 0..100 range
                 pt[f] = round(100 * random.random(), 2)
+        # occasional spike so anomaly detection is visible in the demo
+        if random.random() < 0.03:
+            f = random.choice(list(pt.keys()))
+            pt[f] = pt[f] + {"temperature": 10, "humidity": 25, "pressure": 20, "co2": 300}.get(f, 40)
         pts.append(push_memory(twin_id, pt))
         write_influx(twin_id, pt)
     return {"inserted": len(pts)}
