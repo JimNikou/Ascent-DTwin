@@ -108,18 +108,20 @@
       <label class="pill"><input type="checkbox" id="live-toggle" checked/> Live (2s)</label>
     </div>
 
-    <div id="detail"></div>
+    <div class="main-scroll">
+      <div id="detail"></div>
 
-    <div class="section-title">Library</div>
-    <div class="grid" id="cards"></div>
+      <div class="section-title">Library</div>
+      <div class="grid" id="cards"></div>
 
-    <div class="footer">
-      <img class="ihu-logo footer-logo" src="/static/ihu-logo.png" alt="International Hellenic University"/>
-      Ascent-DTwin &middot; International Hellenic University &middot; MIT License &middot;
-      Built on INTO-CPS DTaaS concepts (third-party services: Grafana, InfluxDB, Mosquitto MQTT, JupyterLab).
-      See <a href="https://github.com/INTO-CPS-Association/DTaaS" target="_blank">DTaaS upstream</a>.
-      <br/>MQTT topic pattern: <code>ascent/&lt;twin-id&gt;/telemetry</code> &middot;
-      HTTP: <code>POST /api/twins/&lt;id&gt;/telemetry</code>
+      <div class="footer">
+        <img class="ihu-logo footer-logo" src="/static/ihu-logo.png" alt="International Hellenic University"/>
+        Ascent-DTwin &middot; International Hellenic University &middot; MIT License &middot;
+        Built on INTO-CPS DTaaS concepts (third-party services: Grafana, InfluxDB, Mosquitto MQTT, JupyterLab).
+        See <a href="https://github.com/INTO-CPS-Association/DTaaS" target="_blank">DTaaS upstream</a>.
+        <br/>MQTT topic pattern: <code>ascent/&lt;twin-id&gt;/telemetry</code> &middot;
+        HTTP: <code>POST /api/twins/&lt;id&gt;/telemetry</code>
+      </div>
     </div>
   </main>
 </div>
