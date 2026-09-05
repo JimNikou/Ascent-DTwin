@@ -25,7 +25,8 @@ cybersecurity funding project.
 - **Grafana dashboards** — pre-provisioned live telemetry dashboard (InfluxDB Flux) with per-twin, per-field panels
 - **JupyterLab workspace** — demo and anomaly-detection notebooks, in the style of DTaaS user workspaces
 - **Synthetic data generator** — feeds every demo twin with realistic field values (per-twin intervals, occasional spikes so anomaly detection is visible) and backfills one hour of history on first run, so the UI and Grafana work without any hardware
-- **Web UI** — professional light-theme interface with live charts, KPIs, health badges and service health indicators
+- **Web UI** — professional platform interface (Kafka/ANSA-inspired: dark sidebar, dense tables, status pills) with four pages: Dashboard, Twin Library, Documentation and About
+- **Platform dashboard** — live overview with twin/health/anomaly statistics, service health, a clickable twin status table and a real-time activity feed (twin CRUD, auto-registrations, synthetic injections, anomaly events)
 
 ## Prerequisites
 
@@ -119,6 +120,13 @@ health badges are populated immediately. The demo twins cover different scenario
 | `weather-station` | Campus rooftop | temperature, humidity, pressure, wind_speed, rainfall |
 | `water-tank` | Reservoir (60 s interval) | level, flow, pressure |
 
+The UI has four pages (top navigation):
+
+- **Dashboard** — platform overview: twin/health/anomaly statistics, service health, quick links, a clickable twin status table and the recent activity feed
+- **Twin Library** — the full-screen twin management view described below
+- **Documentation** — architecture, MQTT/HTTP contract, API reference, configuration and troubleshooting
+- **About** — project info, tech stack, version and links
+
 - **New Twin** — create a digital twin (name, description, asset type, location, MQTT topic, fields)
 - **Twin Library** — select a twin to view its live chart, KPIs and health badge
 - **Health badge** — 0-100 score per twin (green = healthy, amber = degraded, red = critical), refreshed live
@@ -132,8 +140,10 @@ health badges are populated immediately. The demo twins cover different scenario
 
 Open <http://localhost:3000> and sign in with the Grafana credentials (default
 `admin` / `ascent-admin`). The **Ascent-DTwin — Live Telemetry** dashboard is
-pre-provisioned and displays temperature, humidity, CO2 and pressure for `esp32-demo`
-from InfluxDB.
+pre-provisioned and reads telemetry from InfluxDB. A **Twin** dropdown lists every
+twin with data, and a **Field** dropdown (default **All**) auto-generates one chart
+per sensor field — see [Grafana & Jupyter in the platform](#grafana--jupyter-in-the-platform)
+for details.
 
 ### JupyterLab
 
@@ -157,6 +167,7 @@ Interactive API documentation is available at <http://localhost:8000/docs>.
 | `GET` | `/api/twins/{id}/telemetry` | Read telemetry points (each point has an `anomaly` flag) |
 | `GET` | `/api/twins/{id}/health` | Twin health score (0-100) and breakdown |
 | `POST` | `/api/twins/{id}/simulate` | Insert synthetic points |
+| `GET` | `/api/activity` | Platform activity feed (twin CRUD, anomalies, simulations) |
 | `GET` | `/api/health` | Service health status |
 
 ### ESP32 live test
