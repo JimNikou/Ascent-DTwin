@@ -99,6 +99,7 @@ async function renderDetail(){
   const el = $('detail');
   if(!selected){ el.innerHTML = `<div class="card empty-card"><h3>No twin selected</h3><p>Select a twin from the library or create a new one to view live telemetry.</p><button class="btn" onclick="openModal(null)">New Twin</button></div>`; return; }
   const t = selected;
+  if(chart){ chart.destroy(); chart = null; }   // canvas is about to be replaced
   el.innerHTML = `<div class="card">
     <div class="detail-head">
       <h3>${esc(t.name)} <span class="twin-id">/${esc(t.id)}</span></h3>
@@ -108,7 +109,7 @@ async function renderDetail(){
     <p>${esc(t.description||'')}</p>
     <div class="meta"><span class="tag">${esc(t.asset_type)}</span><span class="tag">${esc(t.location)}</span><span class="tag">${esc(t.status||'active')}</span></div>
     <div class="kpis" id="kpis"></div>
-    <div class="chart-wrap"><canvas id="live" height="110"></canvas>
+    <div class="chart-wrap"><div class="chart-box"><canvas id="live"></canvas></div>
       <div class="chart-meta">
         <span id="live-meta">Waiting for telemetry&hellip;</span>
         <span style="flex:1"></span>
@@ -129,20 +130,35 @@ async function updateLive(first=false){
     const labels = pts.map(p=>new Date(p.time).toLocaleTimeString());
     const vals = pts.map(p=>Number(p[field] ?? NaN));
     const last = pts[pts.length-1] || {};
-    // KPIs
+    // KPIs — always render 4 slots so the layout height never changes
     const k = $('kpis');
     if(k){
       const show = ['temperature','humidity','pressure','co2'].filter(f=>last[f]!==undefined);
-      k.innerHTML = (show.length?show:Object.keys(last).filter(x=>x!=='time').slice(0,4)).map(f=>
-        `<div class="kpi"><small>${f}</small><b>${last[f] ?? '—'}</b></div>`).join('') || `<div class="kpi"><small>no data</small><b>—</b></div>`;
+      const fields = (show.length?show:Object.keys(last).filter(x=>x!=='time')).slice(0,4);
+      const cells = [];
+      for(let i=0;i<4;i++){
+        const f = fields[i];
+        cells.push(f ? `<div class="kpi"><small>${f}</small><b>${last[f] ?? '—'}</b></div>`
+                     : `<div class="kpi"><small>&nbsp;</small><b>—</b></div>`);
+      }
+      k.innerHTML = cells.join('');
     }
     const m = $('live-meta');
     if(m) m.textContent = pts.length ? `${pts.length} points &middot; last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
     const ctx = $('live'); if(!ctx) return;
-    if(chart) chart.destroy();
-    chart = new Chart(ctx, {type:'line',
-      data:{labels, datasets:[{label:field, data:vals, borderColor:'#0969da', backgroundColor:'rgba(9,105,218,.10)', fill:true, tension:.3, pointRadius:0, borderWidth:1.5}]},
-      options:{plugins:{legend:{labels:{color:'#57606a', boxWidth:12, font:{size:11}}}}, scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:8,font:{size:11}}, grid:{color:'#eef0f3'}}, y:{ticks:{color:'#8b949e',font:{size:11}}, grid:{color:'#eef0f3'}}}}});
+    if(chart){
+      // update in place — no destroy/recreate, no layout shift, no scroll jump
+      chart.data.labels = labels;
+      chart.data.datasets[0].label = field;
+      chart.data.datasets[0].data = vals;
+      chart.update('none');
+    } else {
+      chart = new Chart(ctx, {type:'line',
+        data:{labels, datasets:[{label:field, data:vals, borderColor:'#0969da', backgroundColor:'rgba(9,105,218,.10)', fill:true, tension:.3, pointRadius:0, borderWidth:1.5}]},
+        options:{responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:'#57606a', boxWidth:12, font:{size:11}}}},
+          scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:8,font:{size:11}}, grid:{color:'#eef0f3'}}, y:{ticks:{color:'#8b949e',font:{size:11}}, grid:{color:'#eef0f3'}}}}});
+    }
   }catch(e){ console.warn(e); }
 }
 
