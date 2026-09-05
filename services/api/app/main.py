@@ -6,6 +6,7 @@ Lightweight Digital Twin library manager inspired by INTO-CPS DTaaS.
 - Synthetic data generator for demo / Grafana example
 """
 import json
+import math
 import os
 import re
 import threading
@@ -248,7 +249,7 @@ def synthetic_loop():
                     except HTTPException:
                         continue
                     point = {
-                        "temperature": round(22 + 3 * random.random() + 0.5 * __import__("math").sin(t / 30), 2),
+                        "temperature": round(22 + 3 * random.random() + 0.5 * math.sin(t / 30), 2),
                         "humidity": round(45 + 10 * random.random(), 2),
                         "pressure": round(1013 + 4 * random.random() - 2, 2),
                         "co2": round(420 + 80 * random.random(), 1),

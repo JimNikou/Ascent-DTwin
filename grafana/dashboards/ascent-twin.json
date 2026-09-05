@@ -2,6 +2,19 @@
   "title": "Ascent-DTwin — Live Telemetry",
   "uid": "ascent-dtwin",
   "timezone": "browser",
+  "refresh": "5s",
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "InfluxDB bucket",
+        "type": "constant",
+        "query": "ascent-twins",
+        "current": {"text": "ascent-twins", "value": "ascent-twins"},
+        "hide": 0
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -11,7 +24,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"${INFLUX_BUCKET}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"esp32-demo\" and r[\"_field\"] == \"temperature\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
+          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"esp32-demo\" and r[\"_field\"] == \"temperature\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
         }
       ],
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
@@ -24,7 +37,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"${INFLUX_BUCKET}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"esp32-demo\" and r[\"_field\"] == \"humidity\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
+          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"esp32-demo\" and r[\"_field\"] == \"humidity\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
         }
       ],
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
@@ -37,12 +50,12 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"${INFLUX_BUCKET}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"esp32-demo\" and (r[\"_field\"] == \"co2\" or r[\"_field\"] == \"pressure\"))"
+          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"esp32-demo\" and (r[\"_field\"] == \"co2\" or r[\"_field\"] == \"pressure\"))"
         }
       ],
       "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
     }
   ],
   "schemaVersion": 39,
-  "version": 1
+  "version": 2
 }

@@ -1,6 +1,15 @@
 let twins = [], selected = null, chart = null, timer = null;
 const $ = (id) => document.getElementById(id);
 
+// ---- toast notifications
+function toast(msg, type='info'){
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  $('toasts').appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 300); }, 3200);
+}
+
 async function api(path, opts={}) {
   const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
   if(!r.ok){ const t = await r.text(); throw new Error(t||r.statusText); }
@@ -18,7 +27,14 @@ async function refreshHealth(){
 function setDot(name, up){ $('dot-'+name).className = 'dot ' + (up?'up':'down'); }
 
 async function loadTwins(){
-  twins = await api('/api/twins');
+  $('twin-list').innerHTML = '<div class="loading">Loading twins…</div>';
+  $('cards').innerHTML = '<div class="loading">Loading…</div>';
+  try{
+    twins = await api('/api/twins');
+  }catch(e){
+    toast('Failed to load twins: ' + e.message, 'error');
+    twins = [];
+  }
   if(!selected || !twins.find(t=>t.id===selected.id)){
     selected = twins[0] || null;
   } else {
@@ -34,7 +50,12 @@ function filtered(){
 
 function renderList(){
   const el = $('twin-list'); el.innerHTML='';
-  filtered().forEach(t=>{
+  const list = filtered();
+  if(!list.length){
+    el.innerHTML = `<div class="empty">No twins match.<br/><button class="btn small" onclick="openModal(null)">+ Create one</button></div>`;
+    return;
+  }
+  list.forEach(t=>{
     const d = document.createElement('div');
     d.className = 'twin-item' + (selected&&selected.id===t.id?' active':'');
     d.innerHTML = `<b>${esc(t.name)}</b><span>${esc(t.id)} · ${esc(t.asset_type||'')}</span>`;
@@ -45,7 +66,12 @@ function renderList(){
 
 function renderCards(){
   const el = $('cards'); el.innerHTML='';
-  filtered().forEach(t=>{
+  const list = filtered();
+  if(!list.length){
+    el.innerHTML = `<div class="card empty-card"><h3>No twins yet</h3><p>Create your first digital twin to start collecting live telemetry.</p><button class="btn" onclick="openModal(null)">+ New Twin</button></div>`;
+    return;
+  }
+  list.forEach(t=>{
     const d = document.createElement('div');
     d.className='card';
     d.innerHTML = `<h3>${esc(t.name)}</h3><p>${esc(t.description||'')}</p>
@@ -59,8 +85,11 @@ function renderCards(){
     d.querySelector('[data-act=view]').onclick=()=>{selected=t;renderList();renderDetail();startLive();window.scrollTo({top:0,behavior:'smooth'});};
     d.querySelector('[data-act=edit]').onclick=()=>openModal(t);
     d.querySelector('[data-act=dup]').onclick=async()=>{
-      await api('/api/twins',{method:'POST',body:JSON.stringify({name:t.name+' copy',description:t.description,asset_type:t.asset_type,location:t.location,fields:t.fields})});
-      await loadTwins();
+      try{
+        await api('/api/twins',{method:'POST',body:JSON.stringify({name:t.name+' copy',description:t.description,asset_type:t.asset_type,location:t.location,fields:t.fields})});
+        toast(`Duplicated "${t.name}"`, 'success');
+        await loadTwins();
+      }catch(e){ toast('Duplicate failed: '+e.message, 'error'); }
     };
     el.appendChild(d);
   });
@@ -68,7 +97,7 @@ function renderCards(){
 
 async function renderDetail(){
   const el = $('detail');
-  if(!selected){ el.innerHTML = `<div class="card">No twins yet — create one.</div>`; return; }
+  if(!selected){ el.innerHTML = `<div class="card empty-card"><h3>No twin selected</h3><p>Select a twin from the library or create a new one to see live telemetry.</p><button class="btn" onclick="openModal(null)">+ New Twin</button></div>`; return; }
   const t = selected;
   el.innerHTML = `<div class="card">
     <div class="row"><h3 style="margin:0;flex:1">${esc(t.name)} <small style="color:var(--muted)">/${esc(t.id)}</small></h3>
@@ -140,9 +169,13 @@ async function saveModal(){
     mqtt_topic:$('f-topic').value||undefined,
     fields:$('f-fields').value.split(',').map(s=>s.trim()).filter(Boolean)
   };
-  if(editing) await api('/api/twins/'+editing.id,{method:'PUT',body:JSON.stringify(body)});
-  else await api('/api/twins',{method:'POST',body:JSON.stringify(body)});
-  closeModal(); await loadTwins();
+  if(!body.name.trim()){ toast('Name is required', 'error'); return; }
+  try{
+    if(editing) await api('/api/twins/'+editing.id,{method:'PUT',body:JSON.stringify(body)});
+    else await api('/api/twins',{method:'POST',body:JSON.stringify(body)});
+    toast(editing ? `Updated "${body.name}"` : `Created "${body.name}"`, 'success');
+    closeModal(); await loadTwins();
+  }catch(e){ toast('Save failed: '+e.message, 'error'); }
 }
 
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -155,17 +188,23 @@ function espSnippet(){
 
 $('btn-new').onclick=()=>openModal(null);
 $('modal-cancel').onclick=closeModal;
-$('modal-save').onclick=()=>saveModal().catch(e=>alert(e.message));
+$('modal-save').onclick=()=>saveModal();
 $('modal-delete').onclick=async()=>{ if(!editing) return; if(!confirm('Delete '+editing.name+'?')) return;
-  await api('/api/twins/'+editing.id,{method:'DELETE'}); closeModal(); selected=null; await loadTwins(); };
+  try{
+    await api('/api/twins/'+editing.id,{method:'DELETE'}); closeModal(); selected=null;
+    toast(`Deleted "${editing.name}"`, 'success'); await loadTwins();
+  }catch(e){ toast('Delete failed: '+e.message, 'error'); } };
 $('btn-refresh').onclick=()=>{refreshHealth();loadTwins();};
 $('search').oninput=()=>{renderList();renderCards();};
 $('live-field').onchange=()=>updateLive(true);
-$('btn-sim').onclick=async()=>{ if(!selected) return alert('Select a twin first');
-  await api(`/api/twins/${selected.id}/simulate?n=30`,{method:'POST'}); updateLive(true); };
+$('btn-sim').onclick=async()=>{ if(!selected) return toast('Select a twin first', 'error');
+  try{
+    const r = await api(`/api/twins/${selected.id}/simulate?n=30`,{method:'POST'});
+    toast(`Injected ${r.inserted} synthetic points`, 'success'); updateLive(true);
+  }catch(e){ toast('Simulate failed: '+e.message, 'error'); } };
 $('btn-esp32').onclick=()=>{ $('esp-code').textContent=espSnippet(); $('esp-back').classList.add('open'); };
 $('esp-close').onclick=()=>$('esp-back').classList.remove('open');
-$('esp-copy').onclick=()=>{ navigator.clipboard.writeText($('esp-code').textContent); };
+$('esp-copy').onclick=()=>{ navigator.clipboard.writeText($('esp-code').textContent); toast('Snippet copied to clipboard', 'success'); };
 document.querySelectorAll('[data-link]').forEach(b=>b.onclick=()=>window.open(b.dataset.link,'_blank'));
 
 refreshHealth(); loadTwins(); setInterval(refreshHealth,5000);
