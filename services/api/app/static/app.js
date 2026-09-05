@@ -147,8 +147,9 @@ async function renderDetail(){
   $('d-del').onclick=()=>armDelete($('d-del'), 'Delete', async()=>{
     try{
       await api('/api/twins/'+t.id,{method:'DELETE'}); selected=null;
-      toast(`Deleted "${t.name}"`, 'success'); await loadTwins();
+      toast(`Deleted "${t.name}"`, 'success');
     }catch(e){ toast('Delete failed: '+e.message, 'error'); }
+    await loadTwins();   // always refresh the UI so the twin disappears immediately
   });
   await updateLive(true);
 }
@@ -285,11 +286,12 @@ function espSnippet(){
 $('btn-new').onclick=()=>openModal(null);
 $('modal-cancel').onclick=closeModal;
 $('modal-save').onclick=()=>saveModal();
-$('modal-delete').onclick=()=>{ if(!editing) return; armDelete($('modal-delete'), 'Delete', async()=>{
+$('modal-delete').onclick=()=>{ if(!editing) return; const id = editing.id, name = editing.name; armDelete($('modal-delete'), 'Delete', async()=>{
   try{
-    await api('/api/twins/'+editing.id,{method:'DELETE'}); closeModal(); selected=null;
-    toast(`Deleted "${editing.name}"`, 'success'); await loadTwins();
+    await api('/api/twins/'+id,{method:'DELETE'}); closeModal(); selected=null;
+    toast(`Deleted "${name}"`, 'success');
   }catch(e){ toast('Delete failed: '+e.message, 'error'); }
+  await loadTwins();   // always refresh the UI so the twin disappears immediately
 }); };
 $('btn-refresh').onclick=()=>{refreshHealth();loadTwins();};
 $('search').oninput=()=>{
