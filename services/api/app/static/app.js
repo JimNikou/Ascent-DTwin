@@ -95,7 +95,20 @@ function renderCards(){
   });
 }
 
+// populate the live-field dropdown from the selected twin's sensors
+function populateFields(){
+  const sel = $('live-field');
+  if(!sel) return;
+  const prev = sel.value;
+  const fields = (selected && selected.fields && selected.fields.length)
+    ? selected.fields
+    : ['temperature','humidity','pressure','co2'];
+  sel.innerHTML = fields.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  if(fields.includes(prev)) sel.value = prev;
+}
+
 async function renderDetail(){
+  populateFields();
   const el = $('detail');
   if(!selected){ el.innerHTML = `<div class="card empty-card"><h3>No twin selected</h3><p>Select a twin from the library or create a new one to view live telemetry.</p><button class="btn" onclick="openModal(null)">New Twin</button></div>`; return; }
   const t = selected;
@@ -191,7 +204,10 @@ async function saveModal(){
   if(!body.name.trim()){ toast('Name is required', 'error'); return; }
   try{
     if(editing) await api('/api/twins/'+editing.id,{method:'PUT',body:JSON.stringify(body)});
-    else await api('/api/twins',{method:'POST',body:JSON.stringify(body)});
+    else {
+      const created = await api('/api/twins',{method:'POST',body:JSON.stringify(body)});
+      selected = created;   // select the new twin so its detail + sensors show immediately
+    }
     toast(editing ? `Updated "${body.name}"` : `Created "${body.name}"`, 'success');
     closeModal(); await loadTwins();
   }catch(e){ toast('Save failed: '+e.message, 'error'); }

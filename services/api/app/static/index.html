@@ -46,12 +46,6 @@
       <button id="btn-esp32">ESP32 Firmware &amp; Topic</button>
       <button id="btn-sim">Generate Synthetic Data</button>
     </div>
-
-    <div class="about">
-      Ascent-DTwin is an open-source tool for viewing, creating, editing and deleting
-      digital twins with live telemetry. Minimal DTaaS core: twin library (JSON),
-      MQTT ingest, InfluxDB storage, Grafana visualization, Jupyter analysis.
-    </div>
   </aside>
 
   <main class="main">
@@ -92,7 +86,7 @@
       <div class="field"><label>Location</label><input id="f-location" value="IHU Lab"/></div>
     </div>
     <div class="field"><label>MQTT topic (optional)</label><input id="f-topic" placeholder="ascent/my-twin/telemetry"/></div>
-    <div class="field"><label>Fields (comma separated)</label><input id="f-fields" value="temperature,humidity,pressure,co2"/></div>
+    <div class="field"><label>Sensors / fields (comma separated)</label><input id="f-fields" value="temperature,humidity,pressure,co2" placeholder="e.g. temperature,humidity,vibration,current"/></div>
     <div class="row" style="margin-top:14px">
       <button class="btn" id="modal-save">Save</button>
       <button class="btn ghost" id="modal-cancel">Cancel</button>

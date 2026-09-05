@@ -360,15 +360,23 @@ def get_telemetry(twin_id: str, limit: int = 100):
 
 @app.post("/api/twins/{twin_id}/simulate")
 def simulate(twin_id: str, n: int = 20):
-    load_twin(twin_id)
+    twin = load_twin(twin_id)
+    fields = twin.get("fields") or ["temperature", "humidity"]
     pts = []
     for _ in range(min(n, 100)):
-        pt = {
-            "temperature": round(20 + 6 * random.random(), 2),
-            "humidity": round(40 + 15 * random.random(), 2),
-            "pressure": round(1010 + 6 * random.random(), 2),
-            "co2": round(400 + 120 * random.random(), 1),
-        }
+        pt = {}
+        for f in fields:
+            if f == "temperature":
+                pt[f] = round(20 + 6 * random.random(), 2)
+            elif f == "humidity":
+                pt[f] = round(40 + 15 * random.random(), 2)
+            elif f == "pressure":
+                pt[f] = round(1010 + 6 * random.random(), 2)
+            elif f == "co2":
+                pt[f] = round(400 + 120 * random.random(), 1)
+            else:
+                # generic numeric sensor — plausible 0..100 range
+                pt[f] = round(100 * random.random(), 2)
         pts.append(push_memory(twin_id, pt))
         write_influx(twin_id, pt)
     return {"inserted": len(pts)}
