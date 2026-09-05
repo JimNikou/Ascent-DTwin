@@ -163,6 +163,69 @@ No hardware available? Run the Python sender, which posts the same payload over 
 python examples/python/synthetic_sender.py
 ```
 
+## Grafana & Jupyter in the platform
+
+Ascent-DTwin follows the DTaaS pattern of **ingest → store → visualize → analyze**.
+Telemetry flows from devices (or the synthetic generator) through MQTT into the API,
+which stores it in InfluxDB. Grafana and Jupyter then consume that data in two
+complementary ways:
+
+```
+[ ESP32 / synthetic ] --MQTT--> [ Mosquitto ] --> [ ascent-api ] --> [ InfluxDB ]
+                                                                        |
+                                              +-------------------------+
+                                              v                         v
+                                        [ Grafana :3000 ]        [ Jupyter :8888 ]
+                                        live dashboards          analysis notebooks
+```
+
+### Grafana — live monitoring
+
+Grafana is the **visualization** layer. It reads telemetry directly from InfluxDB and
+renders auto-refreshing dashboards suitable for lab screens or control rooms.
+
+- Open <http://localhost:3000> (top-bar **Grafana** button) and sign in with the
+  Grafana credentials (default `admin` / `ascent-admin`).
+- The **Ascent-DTwin — Live Telemetry** dashboard is pre-provisioned on startup — no
+  manual setup. It contains three panels for `esp32-demo`:
+  - Temperature (°C)
+  - Humidity (%)
+  - CO2 + Pressure
+- Panels query InfluxDB through the `InfluxDB-Ascent` datasource, filtered by the
+  `bucket` template variable (`ascent-twins`).
+- Because the synthetic generator feeds `esp32-demo` every 2 seconds, the dashboard
+  updates live — the same data shown in the web UI chart, as a full dashboard.
+
+### JupyterLab — analysis
+
+Jupyter is the **analysis** layer: a Python workspace (DTaaS-style) for querying the
+API, plotting telemetry, running calculations or building models on twin data.
+
+- Open <http://localhost:8888> (top-bar **Jupyter** button) and enter the Jupyter
+  token (default `ascent`).
+- The demo notebook `work/01-ascent-demo.ipynb` walks through the full workflow:
+  1. **Connect** to the Ascent API (`http://ascent-api:8000` inside the Docker
+     network, with automatic localhost fallback).
+  2. **List twins** — pull the twin library from the API.
+  3. **Pull live telemetry** — fetch the last 100 points for `esp32-demo` and plot
+     temperature with matplotlib.
+  4. **Push synthetic data** — post a JSON payload to the API, exactly like an ESP32
+     would (same endpoint, same format).
+- Run all cells to reproduce the demo end-to-end.
+
+### Grafana vs Jupyter
+
+| | Grafana | Jupyter |
+|---|---|---|
+| Purpose | Live monitoring dashboards | Deep analysis / custom code |
+| Audience | Operators, lab screens | Engineers, data scientists |
+| Data source | InfluxDB (direct) | Ascent API (REST) |
+| Interaction | Point & click | Python code |
+
+Both are optional — the core tool (twin library, live chart, MQTT ingest) works
+standalone. Together they form the full DTaaS-style platform:
+**ingest → store → visualize → analyze**.
+
 ## Repository layout
 
 ```
