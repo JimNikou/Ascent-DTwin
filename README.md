@@ -196,12 +196,15 @@ renders auto-refreshing dashboards suitable for lab screens or control rooms.
 - Open <http://localhost:3000> (top-bar **Grafana** button) and sign in with the
   Grafana credentials (default `admin` / `ascent-admin`).
 - The **Ascent-DTwin — Live Telemetry** dashboard is pre-provisioned on startup — no
-  manual setup. It contains three panels for `esp32-demo`:
+  manual setup. It contains three panels for the selected twin:
   - Temperature (°C)
   - Humidity (%)
   - CO2 + Pressure
+- A **Twin** dropdown at the top of the dashboard lists every twin that has sent data
+  (queried live from InfluxDB). Pick any twin and all three panels switch to it
+  instantly — no query editing needed.
 - Panels query InfluxDB through the `InfluxDB-Ascent` datasource, filtered by the
-  `bucket` template variable (`ascent-twins`).
+  `bucket` and `twin` template variables (`ascent-twins` / selected twin).
 - Because the synthetic generator feeds `esp32-demo` every 2 seconds, the dashboard
   updates live — the same data shown in the web UI chart, as a full dashboard.
 
@@ -216,15 +219,17 @@ API, plotting telemetry, running calculations or building models on twin data.
   1. **Connect** to the Ascent API (`http://ascent-api:8000` inside the Docker
      network, with automatic localhost fallback).
   2. **List twins** — pull the twin library from the API.
-  3. **Pull live telemetry** — fetch the last 100 points for `esp32-demo` and plot
+  3. **Pick a twin** — the notebook auto-selects `esp32-demo` if present, otherwise
+     the first twin in the library (change `TWIN_ID` in one cell to analyze any twin).
+  4. **Pull live telemetry** — fetch the last 100 points for the selected twin and plot
      temperature with matplotlib.
-  4. **Push synthetic data** — post a JSON payload to the API, exactly like an ESP32
+  5. **Push synthetic data** — post a JSON payload to the API, exactly like an ESP32
      would (same endpoint, same format).
 - Run all cells to reproduce the demo end-to-end.
 - **`work/02-anomaly-detection.ipynb`** goes further: it trains an **Isolation Forest**
-  on the twin's recent telemetry, flags anomalies, plots them against the live data and
-  prints the API health score — the machine-learning counterpart to the real-time
-  z-score flagging in the web UI.
+  on the selected twin's recent telemetry, flags anomalies, plots them against the live
+  data and prints the API health score — the machine-learning counterpart to the
+  real-time z-score flagging in the web UI. It uses the same `TWIN_ID` selection.
 
 ### Grafana vs Jupyter
 
@@ -238,6 +243,27 @@ API, plotting telemetry, running calculations or building models on twin data.
 Both are optional — the core tool (twin library, live chart, MQTT ingest) works
 standalone. Together they form the full DTaaS-style platform:
 **ingest → store → visualize → analyze**.
+
+## Adding your own twin
+
+Everything is multi-twin: a new twin appears in the web UI, Grafana and Jupyter
+without any per-twin configuration.
+
+1. **Create the twin** — either in the web UI (**New Twin**) or by simply sending its
+   first MQTT message (zero-touch onboarding auto-registers unknown twin IDs).
+2. **Send data** — flash the ESP32 sketch (topic `ascent/<twin-id>/telemetry`) or POST
+   to `/api/twins/{id}/telemetry`. The API stores every point in InfluxDB and flags
+   anomalies in real time.
+3. **Web UI** — select the twin in the library: live chart, KPIs, health badge and
+   anomaly markers work immediately.
+4. **Grafana** — open the dashboard and pick the twin from the **Twin** dropdown
+   (top-left). The dropdown is populated from InfluxDB, so your new twin appears as
+   soon as it has sent data. All three panels switch to it instantly.
+5. **Jupyter** — run either notebook; the `TWIN_ID` cell auto-selects the first twin
+   (or `esp32-demo` if present). Change `TWIN_ID` to any twin id to analyze it.
+
+No configuration files, no dashboard duplication, no query editing — the platform
+discovers twins from the data itself.
 
 ## Repository layout
 
