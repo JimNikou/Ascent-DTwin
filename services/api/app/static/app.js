@@ -19,12 +19,12 @@ async function api(path, opts={}) {
 async function refreshHealth(){
   try{
     const h = await api('/api/health');
-    setDot('api', h.api==='up'); $('st-api').textContent = h.api;
-    setDot('mqtt', h.mqtt==='up'); $('st-mqtt').textContent = h.mqtt;
-    setDot('influx', String(h.influxdb).startsWith('up')); $('st-influx').textContent = h.influxdb;
+    setDot('api', h.api==='up');
+    setDot('mqtt', h.mqtt==='up');
+    setDot('influx', String(h.influxdb).startsWith('up'));
   }catch{ setDot('api',false); }
 }
-function setDot(name, up){ $('dot-'+name).className = 'dot ' + (up?'up':'down'); }
+function setDot(name, up){ $('dot-'+name).className = 'st-dot ' + (up?'up':'down'); }
 
 // ---- page navigation
 let currentPage = 'dashboard';
@@ -182,7 +182,7 @@ async function renderDetail(){
   el.innerHTML = `<div class="card">
     <div class="detail-head">
       <h3>${esc(t.name)} <span class="twin-id">/${esc(t.id)}</span></h3>
-      <span class="health-badge" id="health-badge">Health &hellip;</span>
+      <span class="health-badge" id="health-badge"><i></i><b>&hellip;</b><small>loading</small></span>
       <button class="btn small ghost" id="d-edit">Edit</button>
       <button class="btn small ghost" id="d-graf">Grafana</button>
       <button class="btn small danger" id="d-del">Delete</button>
@@ -217,10 +217,10 @@ async function refreshHealthBadge(){
   try{
     const h = await api(`/api/twins/${selected.id}/health`);
     hb.className = 'health-badge ' + (h.status||'unknown');
-    hb.innerHTML = `<span class="dot"></span> Health ${h.score} <small>${h.status}</small>`;
+    hb.innerHTML = `<i></i><b>${h.score}</b><small>${h.status}</small>`;
   }catch(e){
     hb.className = 'health-badge unknown';
-    hb.innerHTML = `<span class="dot"></span> Health &mdash;`;
+    hb.innerHTML = `<i></i><b>&mdash;</b><small>unknown</small>`;
   }
 }
 
@@ -234,7 +234,7 @@ function showChartEmpty(){
     es = document.createElement('div');
     es.id = 'live-empty';
     es.className = 'chart-empty';
-    es.innerHTML = `<div><b>No telemetry yet</b><p>This twin has no data. Generate synthetic data or flash an ESP32 to start streaming.</p><button class="btn small" id="btn-sim-inline">Generate Synthetic Data</button></div>`;
+    es.innerHTML = `<div><b>No telemetry yet</b><p>This twin has no data. Generate synthetic data or connect a device to start streaming.</p><button class="btn small" id="btn-sim-inline">Generate Synthetic Data</button></div>`;
     box.appendChild(es);
     es.querySelector('#btn-sim-inline').onclick = ()=>$('btn-sim').click();
   }
@@ -262,7 +262,7 @@ async function updateLive(first=false){
       k.innerHTML = fields.map(f => `<div class="kpi"><small>${esc(f)}</small><b>${last[f] ?? '—'}</b></div>`).join('');
     }
     const m = $('live-meta');
-    if(m) m.textContent = pts.length ? `${pts.length} points · last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
+    if(m) m.textContent = pts.length ? `${pts.length} points · last ${labels[labels.length-1]||''}` : 'No telemetry yet. Generate synthetic data or connect a device to start streaming.';
     const ctx = $('live'); if(!ctx) return;
     if(!pts.length){ showChartEmpty(); return; }
     showChart();

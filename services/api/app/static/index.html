@@ -20,9 +20,11 @@
     <small>Digital Twin Library &amp; Intelligence Platform</small>
   </div>
   <div class="badges">
-    <span class="pill"><span class="dot" id="dot-api"></span> API <b id="st-api">&hellip;</b></span>
-    <span class="pill"><span class="dot" id="dot-mqtt"></span> MQTT <b id="st-mqtt">&hellip;</b></span>
-    <span class="pill"><span class="dot" id="dot-influx"></span> InfluxDB <b id="st-influx">&hellip;</b></span>
+    <div class="status">
+      <span class="svc-ind" title="API service"><i class="st-dot" id="dot-api"></i>API</span>
+      <span class="svc-ind" title="MQTT broker"><i class="st-dot" id="dot-mqtt"></i>MQTT</span>
+      <span class="svc-ind" title="InfluxDB storage"><i class="st-dot" id="dot-influx"></i>InfluxDB</span>
+    </div>
     <button class="navlink" data-link="http://localhost:3000">Grafana</button>
     <button class="navlink" data-link="http://localhost:8888">Jupyter</button>
     <button class="navlink" data-link="/docs">API Docs</button>
@@ -107,7 +109,7 @@
         <option value="pressure">pressure</option>
         <option value="co2">co2</option>
       </select>
-      <label class="pill"><input type="checkbox" id="live-toggle" checked/> Live (2s)</label>
+      <label class="live-toggle"><input type="checkbox" id="live-toggle" checked/> Live 2s</label>
     </div>
 
     <div class="main-scroll">
@@ -118,10 +120,8 @@
 
       <div class="footer">
         <img class="ihu-logo footer-logo" src="/static/ihu-logo.png" alt="International Hellenic University"/>
-        Ascent-DTwin &middot; International Hellenic University &middot; MIT License &middot;
-        Built on INTO-CPS DTaaS concepts (third-party services: Grafana, InfluxDB, Mosquitto MQTT, JupyterLab).
-        See <a href="https://github.com/INTO-CPS-Association/DTaaS" target="_blank">DTaaS upstream</a>.
-        <br/>MQTT topic pattern: <code>ascent/&lt;twin-id&gt;/telemetry</code> &middot;
+        Ascent-DTwin &middot; International Hellenic University &middot; MIT License
+        <br/>MQTT topic: <code>ascent/&lt;twin-id&gt;/telemetry</code> &middot;
         HTTP: <code>POST /api/twins/&lt;id&gt;/telemetry</code>
       </div>
     </div>
