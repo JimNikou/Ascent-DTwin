@@ -22,50 +22,37 @@
         "refresh": 1,
         "current": {"text": "esp32-demo", "value": "esp32-demo"},
         "hide": 0
+      },
+      {
+        "name": "field",
+        "label": "Field",
+        "type": "query",
+        "datasource": {"type": "influxdb", "uid": null},
+        "query": "from(bucket: \"${bucket}\") |> range(start: -7d) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"${twin}\" and r[\"_field\"] != \"anomaly\") |> keep(columns: [\"_field\"]) |> distinct(column: \"_field\")",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {"text": "All", "value": "$__all"},
+        "hide": 0
       }
     ]
   },
   "panels": [
     {
       "id": 1,
-      "title": "Temperature (°C) — ${twin}",
+      "title": "${field} — ${twin}",
       "type": "timeseries",
       "datasource": {"type": "influxdb", "uid": null},
+      "repeat": "field",
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"${twin}\" and r[\"_field\"] == \"temperature\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
+          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"${twin}\" and r[\"_field\"] == \"${field}\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
         }
       ],
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
-    },
-    {
-      "id": 2,
-      "title": "Humidity (%) — ${twin}",
-      "type": "timeseries",
-      "datasource": {"type": "influxdb", "uid": null},
-      "targets": [
-        {
-          "refId": "A",
-          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"${twin}\" and r[\"_field\"] == \"humidity\") |> aggregateWindow(every: 5s, fn: mean, createEmpty: false)"
-        }
-      ],
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
-    },
-    {
-      "id": 3,
-      "title": "CO2 + Pressure — ${twin}",
-      "type": "timeseries",
-      "datasource": {"type": "influxdb", "uid": null},
-      "targets": [
-        {
-          "refId": "A",
-          "query": "from(bucket: \"${bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"telemetry\" and r[\"twin_id\"] == \"${twin}\" and (r[\"_field\"] == \"co2\" or r[\"_field\"] == \"pressure\"))"
-        }
-      ],
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
     }
   ],
   "schemaVersion": 39,
-  "version": 2
+  "version": 3
 }

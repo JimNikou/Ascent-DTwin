@@ -182,7 +182,7 @@ def write_influx(twin_id: str, point: Dict[str, Any]):
         Point = globals().get("_Point")
         p = Point("telemetry").tag("twin_id", twin_id)
         for k, v in point.items():
-            if k == "time":
+            if k == "time" or k == "anomaly":  # anomaly is a computed flag, not sensor data
                 continue
             if isinstance(v, (int, float)):
                 p = p.field(k, float(v))

@@ -196,15 +196,17 @@ renders auto-refreshing dashboards suitable for lab screens or control rooms.
 - Open <http://localhost:3000> (top-bar **Grafana** button) and sign in with the
   Grafana credentials (default `admin` / `ascent-admin`).
 - The **Ascent-DTwin — Live Telemetry** dashboard is pre-provisioned on startup — no
-  manual setup. It contains three panels for the selected twin:
-  - Temperature (°C)
-  - Humidity (%)
-  - CO2 + Pressure
-- A **Twin** dropdown at the top of the dashboard lists every twin that has sent data
-  (queried live from InfluxDB). Pick any twin and all three panels switch to it
-  instantly — no query editing needed.
+  manual setup. It auto-generates **one panel per sensor field** of the selected twin:
+  - A **Twin** dropdown at the top lists every twin that has sent data in the last
+    7 days (queried from InfluxDB).
+  - A **Field** dropdown lists the selected twin's actual sensor fields — whatever the
+    user added or edited on the twin (e.g. `temperature`, `humidity`, or custom fields
+    like `sens1`, `vibration`, `rpm`). It defaults to **All**, so every field gets its
+    own chart automatically.
+  - Pick a different twin and both dropdowns re-query — the panels rebuild for that
+    twin's own sensors. No query editing, no dashboard duplication.
 - Panels query InfluxDB through the `InfluxDB-Ascent` datasource, filtered by the
-  `bucket` and `twin` template variables (`ascent-twins` / selected twin).
+  `bucket`, `twin` and `field` template variables.
 - Because the synthetic generator feeds `esp32-demo` every 2 seconds, the dashboard
   updates live — the same data shown in the web UI chart, as a full dashboard.
 
@@ -259,8 +261,9 @@ without any per-twin configuration.
 4. **Grafana** — open the dashboard and pick the twin from the **Twin** dropdown
    (top-left). The dropdown lists every twin that has sent data in the last 7 days
    (queried from InfluxDB), so your new twin appears as soon as it has sent data and
-   disappears automatically if it goes silent for a week. All three panels switch to
-   the selected twin instantly.
+   disappears automatically if it goes silent for a week. The **Field** dropdown shows
+   the twin's actual sensors (whatever you added or edited), and one chart is
+   auto-generated per field.
 5. **Jupyter** — run either notebook; the `TWIN_ID` cell auto-selects the first twin
    (or `esp32-demo` if present). Change `TWIN_ID` to any twin id to analyze it.
 

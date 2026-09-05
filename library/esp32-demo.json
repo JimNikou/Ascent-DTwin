@@ -9,8 +9,7 @@
     "temperature",
     "humidity",
     "pressure",
-    "co2",
-    "test"
+    "co2"
   ],
   "status": "active",
   "created_at": "2026-09-04T00:00:00+00:00",
