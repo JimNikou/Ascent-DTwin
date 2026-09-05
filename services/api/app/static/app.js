@@ -48,11 +48,11 @@ async function renderDashboard(){
     const points = twins.reduce((s,t)=>s+(t.health?.points||0),0);
     $('dash-stats').innerHTML = `
       <div class="stat"><small>Twins</small><b>${twins.length}</b></div>
-      <div class="stat"><small>Healthy</small><b class="h-healthy">${healthy}</b></div>
-      <div class="stat"><small>Degraded</small><b class="h-degraded">${degraded}</b></div>
-      <div class="stat"><small>Critical</small><b class="h-critical">${critical}</b></div>
-      <div class="stat"><small>Anomalies (window)</small><b>${anomalies}</b></div>
-      <div class="stat"><small>Telemetry points</small><b>${points}</b></div>`;
+      <div class="stat s-healthy"><small>Healthy</small><b class="h-healthy">${healthy}</b></div>
+      <div class="stat s-degraded"><small>Degraded</small><b class="h-degraded">${degraded}</b></div>
+      <div class="stat s-critical"><small>Critical</small><b class="h-critical">${critical}</b></div>
+      <div class="stat"><small>Anomalies (window)</small><b>${anomalies.toLocaleString()}</b></div>
+      <div class="stat"><small>Telemetry points</small><b>${points.toLocaleString()}</b></div>`;
     $('dash-services').innerHTML = `
       <div class="svc"><span class="dot ${health.api==='up'?'up':'down'}"></span> API <b>${health.api}</b></div>
       <div class="svc"><span class="dot ${health.mqtt==='up'?'up':'down'}"></span> MQTT <b>${health.mqtt}</b></div>
@@ -64,10 +64,10 @@ async function renderDashboard(){
       const h = t.health||{};
       return `<tr class="clickable" data-id="${esc(t.id)}">
         <td><b>${esc(t.name)}</b><br/><span class="muted">${esc(t.id)}</span></td>
-        <td><span class="tag h-${h.status||'unknown'}">${h.score??'—'} ${h.status||''}</span></td>
+        <td><span class="health-badge ${h.status||'unknown'}"><i></i><b>${h.score??'—'}</b><small>${h.status||'unknown'}</small></span></td>
         <td>${esc(t.status||'active')}</td>
-        <td>${h.last_seen ? new Date(h.last_seen).toLocaleTimeString() : '—'}</td>
-        <td>${h.points??0}</td>
+        <td title="${esc(h.last_seen||'')}">${relTime(h.last_seen)}</td>
+        <td>${(h.points??0).toLocaleString()}</td>
         <td>${h.anomaly_count??0}</td>
         <td><button class="btn small ghost">View</button></td>
       </tr>`;
@@ -113,6 +113,8 @@ function filtered(){
 function renderList(){
   const el = $('twin-list'); el.innerHTML='';
   const list = filtered();
+  const cc = $('lib-count');
+  if(cc) cc.textContent = list.length===twins.length ? `${twins.length} twins` : `${list.length} of ${twins.length}`;
   if(!list.length){
     el.innerHTML = twins.length
       ? `<div class="empty">No twins match "<b>${esc($('search').value)}</b>".<br/><button class="btn small" onclick="document.getElementById('search-clear').click()">Clear search</button></div>`
@@ -121,7 +123,7 @@ function renderList(){
   }
   list.forEach(t=>{
     const d = document.createElement('div');
-    d.className = 'twin-item' + (selected&&selected.id===t.id?' active':'');
+    d.className = 'twin-item st-' + ((t.health&&t.health.status)||'unknown') + (selected&&selected.id===t.id?' active':'');
     d.innerHTML = `<b>${esc(t.name)}</b><span>${esc(t.id)} · ${esc(t.asset_type||'')}</span>`;
     d.onclick = ()=>{ selected=t; renderList(); renderCards(); renderDetail(); startLive(); };
     el.appendChild(d);
@@ -140,8 +142,9 @@ function renderCards(){
   list.forEach(t=>{
     const d = document.createElement('div');
     d.className='card';
+    const ch = t.health||{};
     d.innerHTML = `<h3>${esc(t.name)}</h3><p>${esc(t.description||'')}</p>
-      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">${esc(t.status||'active')}</span><span class="tag h-${(t.health&&t.health.status)||'unknown'}">Health ${(t.health&&t.health.score)||'—'}</span></div>
+      <div class="meta"><span class="tag">${esc(t.asset_type||'')}</span><span class="tag">${esc(t.location||'')}</span><span class="tag">${esc(t.status||'active')}</span><span class="health-badge ${ch.status||'unknown'}"><i></i><b>${ch.score??'—'}</b><small>${ch.status||'unknown'}</small></span></div>
       <div class="topic">${esc(t.mqtt_topic||'')}</div>
       <div class="row" style="margin-top:10px">
         <button class="btn small" data-act="view">View</button>
@@ -272,18 +275,24 @@ async function updateLive(first=false){
       chart.data.datasets[0].label = field;
       chart.data.datasets[0].data = vals;
       chart.data.datasets[0].pointRadius = pts.map(p=>p.anomaly?4:0);
-      chart.data.datasets[0].pointBackgroundColor = pts.map(p=>p.anomaly?'#cf222e':'transparent');
-      chart.data.datasets[0].pointBorderColor = pts.map(p=>p.anomaly?'#cf222e':'transparent');
+      chart.data.datasets[0].pointBackgroundColor = pts.map(p=>p.anomaly?'#d1242f':'transparent');
+      chart.data.datasets[0].pointBorderColor = pts.map(p=>p.anomaly?'#d1242f':'transparent');
       chart.update('none');
     } else {
       chart = new Chart(ctx, {type:'line',
-        data:{labels, datasets:[{label:field, data:vals, borderColor:'#0969da', backgroundColor:'rgba(9,105,218,.10)', fill:true, tension:.3, borderWidth:1.5,
+        data:{labels, datasets:[{label:field, data:vals, borderColor:'#1f6feb', backgroundColor:'rgba(31,111,235,.08)', fill:true, tension:.3, borderWidth:1.5,
           pointRadius: pts.map(p=>p.anomaly?4:0),
-          pointBackgroundColor: pts.map(p=>p.anomaly?'#cf222e':'transparent'),
-          pointBorderColor: pts.map(p=>p.anomaly?'#cf222e':'transparent')}]},
+          pointBackgroundColor: pts.map(p=>p.anomaly?'#d1242f':'transparent'),
+          pointBorderColor: pts.map(p=>p.anomaly?'#d1242f':'transparent')}]},
         options:{responsive:true, maintainAspectRatio:false,
-          plugins:{legend:{labels:{color:'#57606a', boxWidth:12, font:{size:11}}}},
-          scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:8,font:{size:11}}, grid:{color:'#eef0f3'}}, y:{ticks:{color:'#8b949e',font:{size:11}}, grid:{color:'#eef0f3'}}}}});
+          interaction:{mode:'index',intersect:false},
+          plugins:{
+            legend:{labels:{color:'#5b6470', boxWidth:12, font:{size:11, family:'Inter,sans-serif'}}},
+            tooltip:{backgroundColor:'#1e2228', titleFont:{size:11, family:'Inter,sans-serif'}, bodyFont:{size:11, family:'ui-monospace,monospace'}, padding:10, cornerRadius:4, displayColors:false}
+          },
+          scales:{
+            x:{ticks:{color:'#8a93a0',maxTicksLimit:8,font:{size:11, family:'ui-monospace,monospace'}}, grid:{color:'#e3e6ea'}},
+            y:{ticks:{color:'#8a93a0',font:{size:11, family:'ui-monospace,monospace'}}, grid:{color:'#e3e6ea'}}}}});
     }
     refreshHealthBadge();
   }catch(e){ console.warn(e); }
@@ -347,6 +356,17 @@ async function saveModal(){
 }
 
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function relTime(iso){
+  if(!iso) return '—';
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime())/1000));
+  if(s < 5) return 'just now';
+  if(s < 60) return s + 's ago';
+  const m = Math.floor(s/60);
+  if(m < 60) return m + 'm ago';
+  const h = Math.floor(m/60);
+  if(h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
 
 // ---- device connection modal (ESP32 is one example among several)
 function deviceSnippets(){
