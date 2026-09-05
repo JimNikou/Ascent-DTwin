@@ -245,8 +245,9 @@ pre.code{background:#f6f8fa;border:1px solid var(--border);border-radius:var(--r
 .empty-card .btn{margin-top:8px}
 
 /* ---------------- footer ---------------- */
-.footer{color:var(--text-3);font-size:12px;margin-top:24px;border-top:1px solid var(--border);padding-top:12px;line-height:1.6}
-.footer .ihu-logo{height:22px;vertical-align:middle;margin-right:8px}
+.footer{display:flex;align-items:center;gap:14px;color:var(--text-3);font-size:12px;margin-top:24px;border-top:1px solid var(--border);padding-top:12px;line-height:1.6}
+.footer .ihu-logo{height:30px;width:auto;flex-shrink:0}
+.footer-text{min-width:0}
 
 /* ---------------- scrollbars ---------------- */
 *::-webkit-scrollbar{width:10px;height:10px}
