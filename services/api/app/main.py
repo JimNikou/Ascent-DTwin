@@ -119,6 +119,17 @@ ensure_seed()
 # in-memory telemetry ring buffer: twin_id -> deque
 telemetry_mem: Dict[str, deque] = defaultdict(lambda: deque(maxlen=500))
 
+# recent platform activity feed (shown on the UI dashboard)
+activity: deque = deque(maxlen=200)
+
+def log_event(kind: str, twin_id: str, message: str):
+    activity.appendleft({
+        "time": datetime.now(timezone.utc).isoformat(),
+        "kind": kind,
+        "twin_id": twin_id,
+        "message": message,
+    })
+
 # rolling per-field stats for lightweight z-score anomaly detection
 _rolling: Dict[str, Dict[str, deque]] = defaultdict(lambda: defaultdict(lambda: deque(maxlen=200)))
 
@@ -139,18 +150,24 @@ def _zscore(twin_id: str, field: str, value: float) -> float:
         return 0.0
     return (value - mean) / std
 
-def is_anomalous(twin_id: str, point: Dict[str, Any]) -> bool:
+def anomaly_field(twin_id: str, point: Dict[str, Any]) -> Optional[str]:
     for k, v in point.items():
         if k == "time" or not isinstance(v, (int, float)):
             continue
         if abs(_zscore(twin_id, k, float(v))) > 3.0:
-            return True
-    return False
+            return k
+    return None
+
+def is_anomalous(twin_id: str, point: Dict[str, Any]) -> bool:
+    return anomaly_field(twin_id, point) is not None
 
 def push_memory(twin_id: str, point: Dict[str, Any]):
     point = dict(point)
     point.setdefault("time", datetime.now(timezone.utc).isoformat())
-    point["anomaly"] = is_anomalous(twin_id, point)
+    af = anomaly_field(twin_id, point)
+    point["anomaly"] = af is not None
+    if af is not None:
+        log_event("anomaly.detected", twin_id, f"Anomaly on '{af}' = {point[af]}")
     _update_rolling(twin_id, point)
     telemetry_mem[twin_id].append(point)
     return point
@@ -232,6 +249,7 @@ def ingest(twin_id: str, payload: Dict[str, Any]):
             "status": "active", "created_at": now, "updated_at": now,
         }
         save_twin(twin)
+        log_event("twin.registered", twin_id, f"Auto-registered twin '{twin_id}' from MQTT")
     point = push_memory(twin_id, payload)
     write_influx(twin_id, point)
 
@@ -385,6 +403,10 @@ def health():
         "dtaas_inspired_by": "INTO-CPS DTaaS (Jupyter + Grafana + MQTT + InfluxDB)",
     }
 
+@app.get("/api/activity")
+def get_activity(limit: int = 50):
+    return list(activity)[:limit]
+
 @app.get("/api/twins")
 def get_twins():
     out = []
@@ -416,6 +438,7 @@ def create_twin(body: TwinCreate):
         "updated_at": now,
     }
     save_twin(data)
+    log_event("twin.created", twin_id, f"Created twin '{body.name}'")
     return data
 
 @app.get("/api/twins/{twin_id}")
@@ -435,6 +458,7 @@ def update_twin(twin_id: str, body: TwinUpdate):
             data[k] = v
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     save_twin(data)
+    log_event("twin.updated", twin_id, f"Updated twin '{data.get('name', twin_id)}'")
     return data
 
 @app.delete("/api/twins/{twin_id}")
@@ -444,6 +468,7 @@ def delete_twin(twin_id: str):
         raise HTTPException(404, "not found")
     p.unlink()
     telemetry_mem.pop(twin_id, None)
+    log_event("twin.deleted", twin_id, f"Deleted twin '{twin_id}'")
     return {"deleted": twin_id}
 
 @app.post("/api/twins/{twin_id}/telemetry", status_code=201)
@@ -531,6 +556,7 @@ def simulate(twin_id: str, n: int = 20):
             pt[f] = pt[f] + {"temperature": 10, "humidity": 25, "pressure": 20, "co2": 300}.get(f, 40)
         pts.append(push_memory(twin_id, pt))
         write_influx(twin_id, pt)
+    log_event("telemetry.simulated", twin_id, f"Injected {len(pts)} synthetic points")
     return {"inserted": len(pts)}
 
 # ---- serve UI

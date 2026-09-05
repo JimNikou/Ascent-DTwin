@@ -26,6 +26,43 @@ async function refreshHealth(){
 }
 function setDot(name, up){ $('dot-'+name).className = 'dot ' + (up?'up':'down'); }
 
+// ---- page navigation
+let currentPage = 'dashboard';
+function showPage(name){
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p=>p.style.display = p.id==='page-'+name ? '' : 'none');
+  document.querySelectorAll('.navpage').forEach(b=>b.classList.toggle('active', b.dataset.page===name));
+  if(name==='dashboard') renderDashboard();
+  if(name==='library') loadTwins();
+}
+
+async function renderDashboard(){
+  try{
+    const [twins, health, activity] = await Promise.all([
+      api('/api/twins'), api('/api/health'), api('/api/activity?limit=30')
+    ]);
+    const healthy = twins.filter(t=>t.health?.status==='healthy').length;
+    const degraded = twins.filter(t=>t.health?.status==='degraded').length;
+    const critical = twins.filter(t=>t.health?.status==='critical').length;
+    const anomalies = twins.reduce((s,t)=>s+(t.health?.anomaly_count||0),0);
+    const points = twins.reduce((s,t)=>s+(t.health?.points||0),0);
+    $('dash-stats').innerHTML = `
+      <div class="stat"><small>Twins</small><b>${twins.length}</b></div>
+      <div class="stat"><small>Healthy</small><b class="h-healthy">${healthy}</b></div>
+      <div class="stat"><small>Degraded</small><b class="h-degraded">${degraded}</b></div>
+      <div class="stat"><small>Critical</small><b class="h-critical">${critical}</b></div>
+      <div class="stat"><small>Anomalies (window)</small><b>${anomalies}</b></div>
+      <div class="stat"><small>Telemetry points</small><b>${points}</b></div>`;
+    $('dash-services').innerHTML = `
+      <div class="svc"><span class="dot ${health.api==='up'?'up':'down'}"></span> API <b>${health.api}</b></div>
+      <div class="svc"><span class="dot ${health.mqtt==='up'?'up':'down'}"></span> MQTT <b>${health.mqtt}</b></div>
+      <div class="svc"><span class="dot ${String(health.influxdb).startsWith('up')?'up':'down'}"></span> InfluxDB <b>${health.influxdb}</b></div>`;
+    $('dash-activity').innerHTML = activity.length
+      ? activity.map(a=>`<div class="act"><span class="act-time">${new Date(a.time).toLocaleTimeString()}</span><span class="tag act-${a.kind.replace(/\./g,'-')}">${a.kind}</span><span>${esc(a.message)}</span></div>`).join('')
+      : '<p class="muted">No activity yet. Create a twin or generate synthetic data.</p>';
+  }catch(e){ console.warn('dashboard', e); }
+}
+
 async function loadTwins(){
   // reset the search filter so newly created twins are always visible
   $('search').value = '';
@@ -199,18 +236,12 @@ async function updateLive(first=false){
     const labels = pts.map(p=>new Date(p.time).toLocaleTimeString());
     const vals = pts.map(p=>Number(p[field] ?? NaN));
     const last = pts[pts.length-1] || {};
-    // KPIs — always render 4 slots so the layout height never changes
+    // KPIs — show the twin's actual fields (all of them), not a hardcoded list
     const k = $('kpis');
     if(k){
-      const show = ['temperature','humidity','pressure','co2'].filter(f=>last[f]!==undefined);
-      const fields = (show.length?show:Object.keys(last).filter(x=>x!=='time')).slice(0,4);
-      const cells = [];
-      for(let i=0;i<4;i++){
-        const f = fields[i];
-        cells.push(f ? `<div class="kpi"><small>${f}</small><b>${last[f] ?? '—'}</b></div>`
-                     : `<div class="kpi"><small>&nbsp;</small><b>—</b></div>`);
-      }
-      k.innerHTML = cells.join('');
+      const lastKeys = Object.keys(last).filter(x=>x!=='time' && x!=='anomaly');
+      const fields = (selected && selected.fields && selected.fields.length ? selected.fields : lastKeys);
+      k.innerHTML = fields.map(f => `<div class="kpi"><small>${esc(f)}</small><b>${last[f] ?? '—'}</b></div>`).join('');
     }
     const m = $('live-meta');
     if(m) m.textContent = pts.length ? `${pts.length} points &middot; last ${labels[labels.length-1]||''}` : 'No telemetry yet. The synthetic generator feeds esp32-demo every 2s; flash an ESP32 for live data.';
@@ -242,7 +273,7 @@ async function updateLive(first=false){
 
 function startLive(){
   if(timer) clearInterval(timer);
-  const tick = ()=>{ if($('live-toggle').checked) updateLive(); };
+  const tick = ()=>{ if(currentPage==='library' && $('live-toggle').checked) updateLive(); };
   timer = setInterval(tick, 2000);
 }
 
@@ -331,5 +362,8 @@ $('btn-esp32').onclick=()=>{ $('esp-code').textContent=espSnippet(); $('esp-back
 $('esp-close').onclick=()=>$('esp-back').classList.remove('open');
 $('esp-copy').onclick=()=>{ navigator.clipboard.writeText($('esp-code').textContent); toast('Snippet copied to clipboard', 'success'); };
 document.querySelectorAll('[data-link]').forEach(b=>b.onclick=()=>window.open(b.dataset.link,'_blank'));
+document.querySelectorAll('.navpage').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 
-refreshHealth(); loadTwins(); setInterval(refreshHealth,5000);
+refreshHealth(); loadTwins(); showPage('dashboard');
+setInterval(refreshHealth,5000);
+setInterval(()=>{ if(currentPage==='dashboard') renderDashboard(); }, 5000);

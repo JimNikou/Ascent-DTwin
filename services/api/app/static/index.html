@@ -29,6 +29,40 @@
   </div>
 </header>
 
+<nav class="mainnav">
+  <button class="navpage active" data-page="dashboard">Dashboard</button>
+  <button class="navpage" data-page="library">Twin Library</button>
+  <button class="navpage" data-page="docs">Documentation</button>
+  <button class="navpage" data-page="about">About</button>
+</nav>
+
+<!-- ============================== DASHBOARD ============================== -->
+<section id="page-dashboard" class="page">
+  <div class="page-head">
+    <h2>Platform Overview</h2>
+    <p>Live status of the Ascent-DTwin platform: twins, health, services and recent activity.</p>
+  </div>
+  <div class="stat-grid" id="dash-stats"></div>
+  <div class="dash-cols">
+    <div class="card">
+      <h3>Service Health</h3>
+      <div class="svc-list" id="dash-services"></div>
+      <h3 style="margin-top:18px">Quick Links</h3>
+      <div class="svc-list">
+        <button class="btn small" data-link="http://localhost:3000">Open Grafana</button>
+        <button class="btn small" data-link="http://localhost:8888">Open JupyterLab</button>
+        <button class="btn small" data-link="/docs">API Docs</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recent Activity</h3>
+      <div class="act-list" id="dash-activity"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== LIBRARY ============================== -->
+<section id="page-library" class="page">
 <div class="layout">
   <aside class="sidebar">
     <div class="row">
@@ -78,6 +112,106 @@
     </div>
   </main>
 </div>
+</section>
+
+<!-- ============================== DOCUMENTATION ============================== -->
+<section id="page-docs" class="page">
+  <div class="page-head">
+    <h2>Documentation</h2>
+    <p>How the Ascent-DTwin platform works: data flow, integrations and intelligence features.</p>
+  </div>
+
+  <div class="card doc">
+    <h3>Architecture</h3>
+    <p>Ascent-DTwin is a lightweight digital twin library manager inspired by INTO-CPS DTaaS. It runs as a Docker Compose stack:</p>
+    <ul>
+      <li><b>API</b> (FastAPI) &mdash; twin CRUD, telemetry ingestion, health scoring, anomaly detection, web UI.</li>
+      <li><b>Mosquitto MQTT</b> &mdash; live telemetry bus for ESP32 and other devices.</li>
+      <li><b>InfluxDB</b> &mdash; time-series storage for telemetry history.</li>
+      <li><b>Grafana</b> &mdash; dashboards with per-twin and per-sensor panels.</li>
+      <li><b>JupyterLab</b> &mdash; notebooks for analysis and anomaly detection experiments.</li>
+    </ul>
+    <p>Data flows: <code>device &rarr; MQTT / HTTP &rarr; API &rarr; InfluxDB &rarr; Grafana / Jupyter</code>. The API keeps a rolling in-memory window for real-time anomaly detection and health scoring.</p>
+
+    <h3>Ingesting telemetry</h3>
+    <p>Every twin has an MQTT topic and an HTTP endpoint. Publish JSON with the twin's sensor fields:</p>
+    <ul>
+      <li>MQTT topic: <code>ascent/&lt;twin-id&gt;/telemetry</code> (port 1883)</li>
+      <li>HTTP: <code>POST /api/twins/&lt;twin-id&gt;/telemetry</code> with a JSON body</li>
+    </ul>
+    <pre class="code">{"temperature": 23.4, "humidity": 48.2, "pressure": 1012.1}</pre>
+    <p>Unknown twins are <b>auto-registered</b> on first MQTT message (zero-touch onboarding).</p>
+
+    <h3>ESP32 setup</h3>
+    <p>Use the <b>ESP32 Firmware &amp; Topic</b> button in the Twin Library sidebar to get a ready-to-flash Arduino sketch snippet for the selected twin. The full example lives in <code>examples/esp32/esp32_telemetry.ino</code>. Point the sketch at your PC's IP (Docker host) on port 1883 and publish to the twin's topic.</p>
+
+    <h3>Grafana</h3>
+    <p>Open <b>Grafana</b> from the top bar. The <i>Ascent-DTwin &mdash; Live Telemetry</i> dashboard has two dropdowns:</p>
+    <ul>
+      <li><b>Twin</b> &mdash; pick any twin that has data (auto-populated from InfluxDB).</li>
+      <li><b>Field</b> &mdash; pick one or more sensor fields; a chart is generated per field automatically.</li>
+    </ul>
+
+    <h3>Jupyter</h3>
+    <p>Open <b>JupyterLab</b> from the top bar (token <code>ascent</code>). Notebooks:</p>
+    <ul>
+      <li><code>01-ascent-demo.ipynb</code> &mdash; query telemetry from InfluxDB and plot it.</li>
+      <li><code>02-anomaly-detection.ipynb</code> &mdash; Isolation Forest anomaly detection + health score.</li>
+    </ul>
+    <p>Both notebooks auto-select a twin with data (esp32-demo if present, otherwise the first twin).</p>
+
+    <h3>Twin health score</h3>
+    <p>Each twin gets a 0&ndash;100 health score computed on demand from three components:</p>
+    <ul>
+      <li><b>Freshness (40)</b> &mdash; how recently the last point arrived (&le;10s = 40, &le;60s = 30, &le;5min = 20, &le;30min = 10).</li>
+      <li><b>Volume (30)</b> &mdash; points received in the last 5 minutes (&ge;50 = 30, &ge;20 = 20, &ge;5 = 10).</li>
+      <li><b>Anomaly rate (30)</b> &mdash; share of flagged points in the window (0% = 30, &lt;5% = 20, &lt;20% = 10).</li>
+    </ul>
+    <p>Status: <span class="tag h-healthy">healthy &ge; 80</span> <span class="tag h-degraded">degraded &ge; 50</span> <span class="tag h-critical">critical &lt; 50</span>. Health is tracked per twin and shown on cards, in the detail view and on the dashboard.</p>
+
+    <h3>Anomaly detection</h3>
+    <p>The API computes a rolling z-score per sensor field (last 200 values). A point with |z| &gt; 3 on any field is flagged as an anomaly: it gets a red dot on the live chart, counts against the health score, and appears in the platform activity feed. Anomalies are also visible in the Jupyter notebook using Isolation Forest.</p>
+  </div>
+</section>
+
+<!-- ============================== ABOUT ============================== -->
+<section id="page-about" class="page">
+  <div class="page-head">
+    <h2>About Ascent-DTwin</h2>
+    <p>Digital twin library &amp; intelligence platform &mdash; International Hellenic University.</p>
+  </div>
+
+  <div class="card doc">
+    <h3>Project</h3>
+    <p>Ascent-DTwin is a lightweight digital twin platform for managing device twins, collecting live telemetry and deriving intelligence (health scoring, anomaly detection, analytics). It is built as a research demonstrator at the International Hellenic University (IHU) and is inspired by the INTO-CPS Association's DTaaS architecture.</p>
+
+    <h3>Capabilities</h3>
+    <ul>
+      <li>Digital twin library with full CRUD (create, view, edit, duplicate, delete).</li>
+      <li>Live telemetry ingestion over MQTT and HTTP with zero-touch auto-registration.</li>
+      <li>Time-series storage in InfluxDB with Grafana dashboards.</li>
+      <li>Real-time anomaly detection (z-score) and per-twin health scoring.</li>
+      <li>Jupyter notebooks for analysis and ML-based anomaly detection.</li>
+      <li>Synthetic data generator for demos and development.</li>
+    </ul>
+
+    <h3>Technology stack</h3>
+    <ul>
+      <li>Backend: Python / FastAPI</li>
+      <li>Messaging: Mosquitto MQTT</li>
+      <li>Storage: InfluxDB (time-series)</li>
+      <li>Visualization: Grafana, Chart.js web UI</li>
+      <li>Analysis: JupyterLab (scikit-learn)</li>
+      <li>Deployment: Docker Compose</li>
+    </ul>
+
+    <h3>Context</h3>
+    <p>This platform is developed in the context of cybersecurity research at IHU, demonstrating how digital twins can be used to monitor, analyze and secure connected systems. The demo library ships with six example twins covering industrial, agricultural, IT and utility scenarios.</p>
+
+    <h3>License</h3>
+    <p>MIT License. Third-party services (Grafana, InfluxDB, Mosquitto, JupyterLab) are used as-is. See the <a href="https://github.com/INTO-CPS-Association/DTaaS" target="_blank">DTaaS upstream project</a> for the original architecture concepts.</p>
+  </div>
+</section>
 
 <div class="modal-back" id="modal-back">
   <div class="modal">

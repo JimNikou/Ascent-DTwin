@@ -49,6 +49,50 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .navlink{font-size:12px;color:var(--text-2);background:none;border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;cursor:pointer;font-family:var(--font);white-space:nowrap}
 .navlink:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 
+/* ---------------- main nav ---------------- */
+.mainnav{display:flex;gap:2px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:52px;z-index:15}
+.navpage{background:none;border:none;border-bottom:2px solid transparent;color:var(--text-2);font-size:13px;font-weight:500;font-family:var(--font);padding:10px 14px;cursor:pointer}
+.navpage:hover{color:var(--text)}
+.navpage.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ---------------- pages ---------------- */
+.page{display:none;padding:20px 24px;max-width:1280px;margin:0 auto}
+.page-head{margin-bottom:16px}
+.page-head h2{margin:0 0 4px;font-size:20px;font-weight:600}
+.page-head p{margin:0;color:var(--text-2);font-size:13px}
+
+/* dashboard */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat small{display:block;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.stat b{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat b.h-healthy{color:var(--green)}
+.stat b.h-degraded{color:var(--amber)}
+.stat b.h-critical{color:var(--red)}
+.dash-cols{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;align-items:start}
+.svc-list{display:flex;flex-direction:column;gap:6px}
+.svc{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;background:var(--surface-2)}
+.svc b{margin-left:auto;font-weight:600;color:var(--text)}
+.act-list{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+.act{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface-2)}
+.act-time{color:var(--text-3);font-family:var(--mono);font-size:11px;white-space:nowrap}
+.act .tag{flex-shrink:0}
+.act-twin-created{background:var(--green-soft);border-color:rgba(26,127,55,.3);color:var(--green)}
+.act-twin-updated{background:var(--accent-soft);border-color:rgba(9,105,218,.25);color:var(--accent)}
+.act-twin-deleted{background:var(--red-soft);border-color:rgba(207,34,46,.3);color:var(--red)}
+.act-twin-registered{background:var(--accent-soft);border-color:rgba(9,105,218,.25);color:var(--accent)}
+.act-anomaly-detected{background:var(--red-soft);border-color:rgba(207,34,46,.3);color:var(--red)}
+.act-telemetry-simulated{background:var(--amber-soft);border-color:rgba(154,102,0,.3);color:var(--amber)}
+.muted{color:var(--text-3);font-size:13px}
+
+/* documentation / about */
+.doc h3{margin:20px 0 8px;font-size:14px;font-weight:600;color:var(--text)}
+.doc h3:first-child{margin-top:0}
+.doc p{color:var(--text-2);font-size:13px;margin:0 0 10px}
+.doc ul{margin:0 0 12px;padding-left:20px;color:var(--text-2);font-size:13px}
+.doc li{margin-bottom:4px}
+.doc pre.code{margin:8px 0 12px}
+
 /* ---------------- buttons ---------------- */
 .btn{background:var(--accent);border:1px solid var(--accent);color:#fff;padding:7px 14px;border-radius:var(--radius);font-weight:500;font-size:13px;font-family:var(--font);cursor:pointer;line-height:1.4}
 .btn:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
@@ -62,7 +106,7 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1
 .btn:disabled{opacity:.55;cursor:not-allowed}
 
 /* ---------------- layout ---------------- */
-.layout{display:grid;grid-template-columns:264px 1fr;min-height:calc(100vh - 52px)}
+.layout{display:grid;grid-template-columns:264px 1fr;min-height:calc(100vh - 92px)}
 .sidebar{border-right:1px solid var(--border);padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:4px}
 .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin:16px 0 6px;font-weight:600}
 .sidebar h3:first-child{margin-top:0}
