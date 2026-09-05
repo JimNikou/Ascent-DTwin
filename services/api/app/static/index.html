@@ -36,7 +36,7 @@
       <button class="btn ghost" id="btn-refresh" title="Refresh">Refresh</button>
     </div>
 
-    <h3>Twin Library</h3>
+    <h3 id="lib-title">Twin Library</h3>
     <div class="twin-list" id="twin-list"></div>
 
     <h3>Integrations</h3>
@@ -50,7 +50,10 @@
 
   <main class="main">
     <div class="toolbar">
-      <input id="search" placeholder="Search twins&hellip;"/>
+      <div class="search-wrap">
+        <input id="search" placeholder="Search twins&hellip;"/>
+        <button id="search-clear" class="search-clear" title="Clear search" style="display:none">&times;</button>
+      </div>
       <select id="live-field">
         <option value="temperature">temperature</option>
         <option value="humidity">humidity</option>

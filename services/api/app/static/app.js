@@ -27,6 +27,9 @@ async function refreshHealth(){
 function setDot(name, up){ $('dot-'+name).className = 'dot ' + (up?'up':'down'); }
 
 async function loadTwins(){
+  // reset the search filter so newly created twins are always visible
+  $('search').value = '';
+  $('search-clear').style.display = 'none';
   $('twin-list').innerHTML = '<div class="loading">Loading twins…</div>';
   $('cards').innerHTML = '<div class="loading">Loading…</div>';
   try{
@@ -40,7 +43,11 @@ async function loadTwins(){
   } else {
     selected = twins.find(t=>t.id===selected.id);
   }
-  renderList(); renderCards(); renderDetail(); startLive();
+  $('lib-title').textContent = `Twin Library (${twins.length})`;
+  try{ renderList(); }catch(e){ console.error('renderList', e); }
+  try{ renderCards(); }catch(e){ console.error('renderCards', e); }
+  try{ renderDetail(); }catch(e){ console.error('renderDetail', e); }
+  startLive();
 }
 
 function filtered(){
@@ -52,7 +59,9 @@ function renderList(){
   const el = $('twin-list'); el.innerHTML='';
   const list = filtered();
   if(!list.length){
-    el.innerHTML = `<div class="empty">No twins match.<br/><button class="btn small" onclick="openModal(null)">Create Twin</button></div>`;
+    el.innerHTML = twins.length
+      ? `<div class="empty">No twins match "<b>${esc($('search').value)}</b>".<br/><button class="btn small" onclick="document.getElementById('search-clear').click()">Clear search</button></div>`
+      : `<div class="empty">No twins yet.<br/><button class="btn small" onclick="openModal(null)">Create Twin</button></div>`;
     return;
   }
   list.forEach(t=>{
@@ -68,7 +77,9 @@ function renderCards(){
   const el = $('cards'); el.innerHTML='';
   const list = filtered();
   if(!list.length){
-    el.innerHTML = `<div class="card empty-card"><h3>No twins yet</h3><p>Create your first digital twin to start collecting live telemetry.</p><button class="btn" onclick="openModal(null)">New Twin</button></div>`;
+    el.innerHTML = twins.length
+      ? `<div class="card empty-card"><h3>No matches</h3><p>No twins match your search.</p><button class="btn" onclick="document.getElementById('search-clear').click()">Clear search</button></div>`
+      : `<div class="card empty-card"><h3>No twins yet</h3><p>Create your first digital twin to start collecting live telemetry.</p><button class="btn" onclick="openModal(null)">New Twin</button></div>`;
     return;
   }
   list.forEach(t=>{
@@ -230,7 +241,11 @@ $('modal-delete').onclick=async()=>{ if(!editing) return; if(!confirm('Delete '+
     toast(`Deleted "${editing.name}"`, 'success'); await loadTwins();
   }catch(e){ toast('Delete failed: '+e.message, 'error'); } };
 $('btn-refresh').onclick=()=>{refreshHealth();loadTwins();};
-$('search').oninput=()=>{renderList();renderCards();};
+$('search').oninput=()=>{
+  $('search-clear').style.display = $('search').value ? 'block' : 'none';
+  renderList(); renderCards();
+};
+$('search-clear').onclick=()=>{ $('search').value=''; $('search-clear').style.display='none'; renderList(); renderCards(); };
 $('live-field').onchange=()=>updateLive(true);
 $('btn-sim').onclick=async()=>{ if(!selected) return toast('Select a twin first', 'error');
   try{

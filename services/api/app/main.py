@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------- config
@@ -383,7 +382,13 @@ def simulate(twin_id: str, n: int = 20):
 
 # ---- serve UI
 if STATIC_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    @app.get("/static/{path:path}", include_in_schema=False)
+    def static_file(path: str):
+        f = (STATIC_DIR / path).resolve()
+        if not str(f).startswith(str(STATIC_DIR.resolve())) or not f.is_file():
+            raise HTTPException(404, "not found")
+        # no-cache so the browser always picks up UI updates
+        return FileResponse(str(f), headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/", include_in_schema=False)
 def index():
